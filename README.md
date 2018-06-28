@@ -5,7 +5,7 @@ Machine learning for anomaly detection in Global Imagery Browse Services ([GIBS]
 To install the [GDAL translator library](http://www.gdal.org/) run ```conda install gdal```
 
 # Download Data
-Run ```download_data.py``` to download a dataset. The script uses ```gdal_translate``` with the [GIBS API](https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+API+for+Developers#GIBSAPIforDevelopers-ServiceEndpointsandGetCapabilities). Images are saved in the ```data/``` directory by default. 
+```download_data.py``` downloads a GIBS dataset where each layer for a day is a single image or tiled (see ```--tiled_world``` flag). The script uses ```gdal_translate``` with the [GIBS API](https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+API+for+Developers#GIBSAPIforDevelopers-ServiceEndpointsandGetCapabilities). Images are saved in the ```data/``` directory by default. 
 
 ```
 arguments:
@@ -22,4 +22,4 @@ arguments:
 ```
 
 # Data Preprocessing
-```augment_data.py```
+```augment_data.py``` augment the training set by rotations (90, 180, 270 degrees) and flips (horizontal and vertical).

@@ -69,7 +69,7 @@ gdal_wmts = """<GDAL_WMTS>
 
 class GIBSLayer:
     """GIBS Layer"""
-    def __init__(self, title, layer_name, epsg, format, tilematrixset, time):
+    def __init__(self, title, layer_name, epsg, format, image_resolution, tile_resolution, time):
         self.title = title
         self.layer_name = layer_name
         self.epsg = epsg
@@ -77,7 +77,9 @@ class GIBSLayer:
         format_extensions = {"GTiff": "tiff", "JPEG": "jpg", "PNG": "png"}
         self.format_suffix = format_extensions[format]
 
-        self.tilematrixset = tilematrixset # Tile Matrix Set identifier (e.g. 2km, 1km, 250m, etc.)
+        self.image_resolution = image_resolution # Image resolution (e.g. 2km, 1km, 250m, etc.)
+        self.tile_resolution = tile_resolution # Tile resolution (must be lower than image resolution)
+
         self.time = time
 
         self.gibs_xml = ""
@@ -130,7 +132,7 @@ class GIBSLayer:
 
                 # Define the service URL (TMS)
                 for Service in xml.findall('Service'):
-                    Service.find('ServerUrl').text = "https://gibs.earthdata.nasa.gov/wmts/epsg"+self.epsg+"/best/"+self.layer_name+"/default/{Time}/"+self.tilematrixset+"/${z}/${y}/${x}."+ self.format_suffix
+                    Service.find('ServerUrl').text = "https://gibs.earthdata.nasa.gov/wmts/epsg"+self.epsg+"/best/"+self.layer_name+"/default/{Time}/"+self.image_resolution+"/${z}/${y}/${x}."+ self.format_suffix
                 for DataWindow in xml.findall('DataWindow'):
                     # Use -4194304, 4194304, 4194304, -4194304 for the Polar projections. 
                     # This is the bounding box of the topmost tile, which matches the bounding box of the actual imagery for Polar but not for Geographic.
@@ -138,7 +140,7 @@ class GIBSLayer:
                     DataWindow.find('UpperLeftY').text = "4194304"
                     DataWindow.find('LowerRightX').text = "4194304"
                     DataWindow.find('LowerRightY').text = "-4194304"
-                    DataWindow.find('TileLevel').text = tile_level[self.tilematrixset]
+                    DataWindow.find('TileLevel').text = tile_level[self.tile_resolution]
                     # Use 2, 2 for Polar projections
                     DataWindow.find('TileCountX').text = "2"
                     DataWindow.find('TileCountY').text = "2"
@@ -148,14 +150,14 @@ class GIBSLayer:
 
                 # Define the service URL (TMS)
                 for Service in xml.findall('Service'):
-                    Service.find('ServerUrl').text = "https://gibs.earthdata.nasa.gov/wmts/epsg"+self.epsg+"/best/"+self.layer_name+"/default/{Time}/"+self.tilematrixset+"/${z}/${y}/${x}."+ self.format_suffix
+                    Service.find('ServerUrl').text = "https://gibs.earthdata.nasa.gov/wmts/epsg"+self.epsg+"/best/"+self.layer_name+"/default/{Time}/"+self.image_resolution+"/${z}/${y}/${x}."+ self.format_suffix
                 for DataWindow in xml.findall('DataWindow'):
                     # Use -180.0, 90, 396.0, -198 for Geographic projection
                     DataWindow.find('UpperLeftX').text = "-180.0"
                     DataWindow.find('UpperLeftY').text = "90"
                     DataWindow.find('LowerRightX').text = "396.0"
                     DataWindow.find('LowerRightY').text = "-198"
-                    DataWindow.find('TileLevel').text = tile_level[self.tilematrixset]
+                    DataWindow.find('TileLevel').text = tile_level[self.tile_resolution]
                     # Use 2, 1 for Geographic projection
                     DataWindow.find('TileCountX').text = "2"
                     DataWindow.find('TileCountY').text = "1"       

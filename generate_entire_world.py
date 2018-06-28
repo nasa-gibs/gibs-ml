@@ -64,9 +64,12 @@ parser.add_argument('--epsg', action='store', type=str, dest='epsg',
               default='4326',
               help='The numeric EPSG code of the map projection.  Default:  4326 (geographic)')
 
-# Flag to request tiled world instead of whole world image
+# Tile zoom resolution ("e.g. 2km, 1km, etc.")
 parser.add_argument('--tiled_world', action='store_true',dest='tiled_world',
               help='Flag to download the entire world as a series of tiled images.')
+parser.add_argument('--tile_resolution', action='store', type=str, dest='tile_resolution',
+              default="2km",
+              help='The zoom resolution of the tiles. Must be lower than the image resolution of layer.  Default:  2km')
 
 # Output directory
 parser.add_argument('--output_dir', action='store', type=str, dest='output_dir',
@@ -77,7 +80,7 @@ parser.add_argument('--output_dir', action='store', type=str, dest='output_dir',
 args = parser.parse_args()
 
 epsg = args.epsg
-# tile_resolution = args.tile_resolution
+tile_resolution = args.tile_resolution
 tiled_world = args.tiled_world
 
 # Parse the date information
@@ -95,9 +98,9 @@ else:
 ###############################################################################
 
 # Check valid tile resolution
-# if  tile_resolution not in ["2km", "1km", "500m", "250m", "31.25m"]:
-# 	print("Invalid tile_resolution.")
-# 	exit()
+if  tile_resolution not in ["2km", "1km", "500m", "250m", "31.25m"]:
+	print("Invalid tile_resolution.")
+	exit()
 
 # Create output directory if it does not exist
 output_dir = args.output_dir
@@ -126,18 +129,18 @@ else:
 # Layer definitions (Most popular ones for MODIS Terra and VIIRS SNNP)
 ###############################################################################
 
-MODIS_Terra_CorrectedReflectance_TrueColor = GIBSLayer(title="MODIS TERRA", layer_name="MODIS_Terra_CorrectedReflectance_TrueColor", epsg=epsg, format="JPEG", tilematrixset="250m", time=datetime.now())
-MODIS_Terra_CorrectedReflectance_Bands367 = GIBSLayer(title="MODIS TERRA, Bands 367", layer_name="MODIS_Terra_CorrectedReflectance_Bands367", epsg=epsg, format="JPEG", tilematrixset="250m", time=datetime.now())
-MODIS_Terra_Chlorophyll_A = GIBSLayer(title="MODIS Terra Chlorophyll A", layer_name="MODIS_Terra_Chlorophyll_A", epsg=epsg, format="PNG", tilematrixset="1km", time=datetime.now())
-MODIS_Terra_Land_Surface_Temp_Day = GIBSLayer(title="MODIS TERRA Daytime Land Surface Temperature", layer_name="MODIS_Terra_Land_Surface_Temp_Day", epsg=epsg, format="PNG", tilematrixset="1km", time=datetime.now())
-MODIS_Terra_NDVI_8Day = GIBSLayer(title="MODIS Terra NDVI 8Day", layer_name="MODIS_Terra_NDVI_8Day", epsg=epsg, format="PNG", tilematrixset="250m", time=datetime.now())
+MODIS_Terra_CorrectedReflectance_TrueColor = GIBSLayer(title="MODIS TERRA", layer_name="MODIS_Terra_CorrectedReflectance_TrueColor", epsg=epsg, format="JPEG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
+MODIS_Terra_CorrectedReflectance_Bands367 = GIBSLayer(title="MODIS TERRA, Bands 367", layer_name="MODIS_Terra_CorrectedReflectance_Bands367", epsg=epsg, format="JPEG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
+MODIS_Terra_Chlorophyll_A = GIBSLayer(title="MODIS Terra Chlorophyll A", layer_name="MODIS_Terra_Chlorophyll_A", epsg=epsg, format="PNG", image_resolution="1km", tile_resolution=tile_resolution, time=datetime.now())
+MODIS_Terra_Land_Surface_Temp_Day = GIBSLayer(title="MODIS TERRA Daytime Land Surface Temperature", layer_name="MODIS_Terra_Land_Surface_Temp_Day", epsg=epsg, format="PNG", image_resolution="1km", tile_resolution=tile_resolution, time=datetime.now())
+MODIS_Terra_NDVI_8Day = GIBSLayer(title="MODIS Terra NDVI 8Day", layer_name="MODIS_Terra_NDVI_8Day", epsg=epsg, format="PNG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
 
-VIIRS_SNPP_CorrectedReflectance_TrueColor = GIBSLayer(title="VIIRS SNPP True Color", layer_name="VIIRS_SNPP_CorrectedReflectance_TrueColor", epsg=epsg, format="JPEG", tilematrixset="250m", time=datetime.now())
-VIIRS_SNPP_DayNightBand_ENCC = GIBSLayer(title="VIIRS SNPP DayNightBand ENCC", layer_name="VIIRS_SNPP_DayNightBand_ENCC", epsg=epsg, format="PNG", tilematrixset="500m", time=datetime.now())
-VIIRS_SNPP_Brightness_Temp_BandI5_Day = GIBSLayer(title="VIIRS SNPP Brightness Temp BandI5 Night", layer_name="VIIRS_SNPP_Brightness_Temp_BandI5_Day", epsg=epsg, format="PNG", tilematrixset="250m", time=datetime.now())
+VIIRS_SNPP_CorrectedReflectance_TrueColor = GIBSLayer(title="VIIRS SNPP True Color", layer_name="VIIRS_SNPP_CorrectedReflectance_TrueColor", epsg=epsg, format="JPEG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
+VIIRS_SNPP_DayNightBand_ENCC = GIBSLayer(title="VIIRS SNPP DayNightBand ENCC", layer_name="VIIRS_SNPP_DayNightBand_ENCC", epsg=epsg, format="PNG", image_resolution="500m", tile_resolution=tile_resolution, time=datetime.now())
+VIIRS_SNPP_Brightness_Temp_BandI5_Day = GIBSLayer(title="VIIRS SNPP Brightness Temp BandI5 Night", layer_name="VIIRS_SNPP_Brightness_Temp_BandI5_Day", epsg=epsg, format="PNG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
 
 # No data mask
-MODIS_Terra_Data_No_Data = GIBSLayer(title="MODIS TERRA Data No Data", layer_name="MODIS_Terra_Data_No_Data", epsg=epsg, format="PNG", tilematrixset="250m", time=datetime.now())
+MODIS_Terra_Data_No_Data = GIBSLayer(title="MODIS TERRA Data No Data", layer_name="MODIS_Terra_Data_No_Data", epsg=epsg, format="PNG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
 
 layer_dict = {
 	"MODIS_Terra_CorrectedReflectance_TrueColor": MODIS_Terra_CorrectedReflectance_TrueColor,

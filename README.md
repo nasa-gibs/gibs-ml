@@ -7,7 +7,9 @@ Run ```conda install gdal``` to install the [GDAL translator library](http://www
 # Download Data
 Run ```download_data.py``` to download a GIBS dataset. The script uses ```gdal_translate``` with the [GIBS API](https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+API+for+Developers#GIBSAPIforDevelopers-ServiceEndpointsandGetCapabilities).
 
-Each layer for a day can either be a single image or tiled (set ```--tiled_world``` flag).  Images are saved in the ```data/``` directory by default. 
+Each layer for a day can either be a single image or tiled (set ```--tiled_world``` flag).  
+
+Images are saved in the ```data/``` directory by default. 
 
 ```
 arguments:

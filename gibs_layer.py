@@ -95,8 +95,8 @@ class GIBSLayer:
             datestring: date in string format
         """
         # Use the tiled WMS service
+        parser = etree.XMLParser(strip_cdata=False)
         if protocol == "twms":
-            parser = etree.XMLParser(strip_cdata=False)
             xml = etree.fromstring(gdal_twms, parser)
 
             # Define the service URL (Tiled WMS)
@@ -105,12 +105,8 @@ class GIBSLayer:
                 Service.find('TiledGroupName').text = self.title + " tileset" # TiledGroupName is the layer title concatenated with 'tileset'
                 Service.find('Change').text = datestring
                 
-            pretty_xml = etree.tostring(xml, pretty_print=True)
-            self.gibs_xml = pretty_xml.decode()
-
         # Use TMS service
         else:
-            parser = etree.XMLParser(strip_cdata=False)
             xml = etree.fromstring(gdal_wms, parser)
 
             # Number of bands/channels
@@ -162,5 +158,5 @@ class GIBSLayer:
                     DataWindow.find('TileCountX').text = "2"
                     DataWindow.find('TileCountY').text = "1"       
                 
-            pretty_xml = etree.tostring(xml, pretty_print=True)
-            self.gibs_xml = pretty_xml.decode()
+        pretty_xml = etree.tostring(xml, pretty_print=True)
+        self.gibs_xml = pretty_xml.decode()

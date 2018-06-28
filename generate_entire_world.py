@@ -28,9 +28,15 @@ from gibs_layer import GIBSLayer
 from utils import *
 
 from PIL import Image
+
 from lxml import etree
-from datetime import datetime, time, timedelta
+
+from datetime import datetime, time, timedelta, date
 from dateutil.relativedelta import relativedelta
+
+from functools import partial
+from multiprocessing.dummy import Pool
+from subprocess import call
 
 # Test GDAL/OGR installation
 # Try `conda install gdal` otherwise
@@ -142,6 +148,12 @@ VIIRS_SNPP_Brightness_Temp_BandI5_Day = GIBSLayer(title="VIIRS SNPP Brightness T
 # No data mask
 MODIS_Terra_Data_No_Data = GIBSLayer(title="MODIS TERRA Data No Data", layer_name="MODIS_Terra_Data_No_Data", epsg=epsg, format="PNG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
 
+basemap_layer_dict = {
+	"MODIS_Terra_CorrectedReflectance_TrueColor": MODIS_Terra_CorrectedReflectance_TrueColor,
+	"MODIS_Terra_CorrectedReflectance_Bands367": MODIS_Terra_CorrectedReflectance_Bands367,
+	"VIIRS_SNPP_CorrectedReflectance_TrueColor": VIIRS_SNPP_CorrectedReflectance_TrueColor, 
+}
+
 layer_dict = {
 	"MODIS_Terra_CorrectedReflectance_TrueColor": MODIS_Terra_CorrectedReflectance_TrueColor,
 	"MODIS_Terra_CorrectedReflectance_Bands367": MODIS_Terra_CorrectedReflectance_Bands367,
@@ -201,63 +213,85 @@ def get_bbox(x, y, num_x, num_y, epsg):
 	#     lry = y - 32768
 	return ulx, uly, lrx, lry
 
+def daterange(start_date, end_date):
+    for n in range(int ((end_date - start_date).days)):
+        yield start_date + timedelta(n)
+
 ###############################################################################
 # Main Loop
 ###############################################################################
 
-## TODO: Loop through layers
-## TODO: Loop through dates
+commands = []
 
-# Set the layer we are parsing
-layer = MODIS_Terra_CorrectedReflectance_TrueColor
-date = "2018-06-21"
+output_root_dir = output_dir
 
-# Create a date directory
-output_dir = output_dir + "/" + date 
-if not os.path.exists(output_dir):
-    print("Creating directory " + output_dir)
-    os.makedirs(output_dir)
+# Loop through dates
+start_date = date(2016, 1, 1)
+end_date = date(2018, 6, 27)
+for single_date in daterange(start_date, end_date):
+	datestring = single_date.strftime("%Y-%m-%d")
+	# print(datestring)
 
-# Pull tiled pieces
-if tiled_world:
-	# Create a tiles subdirectory
-	output_dir = output_dir + "/tiles" 
+	# Create a date directory
+	output_dir = output_root_dir + "/" + datestring 
 	if not os.path.exists(output_dir):
 	    print("Creating directory " + output_dir)
 	    os.makedirs(output_dir)
 
-	piece_counter = 0
-	num_x, num_y = 40, 20
-	for y in range(num_y):
-		for x in range(num_x):
-			ulx, uly, lrx, lry = get_bbox(x, y, num_x, num_y, epsg)
+	# Loop through the layers
+	for layer_name, layer in basemap_layer_dict.items():
+		# Option 1: Pull tiled pieces
+		if tiled_world:
+			# Create a tiles subdirectory
+			output_dir = output_dir + "/tiles" 
+			if not os.path.exists(output_dir):
+			    print("Creating directory " + output_dir)
+			    os.makedirs(output_dir)
 
-			# Build the XML input file
-			layer.generate_xml("twms", date)
+			piece_counter = 0
+			num_x, num_y = 40, 20
+			for y in range(num_y):
+				for x in range(num_x):
+					ulx, uly, lrx, lry = get_bbox(x, y, num_x, num_y, epsg)
+
+					# Build the XML input file
+					layer.generate_xml("twms", datestring)
+					infile = layer.gibs_xml
+
+					# Build name of image output file
+					infile = "'" + infile + "'"
+					outfile = output_dir + "/" + layer.layer_name + "_" + str(piece_counter) + "." + layer.format_suffix
+
+					cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES", "-outsize", "512", "512", "-projwin", str(ulx), str(uly), str(lrx), str(lry), infile, outfile]
+					commands.append(' '.join(cmd))
+					# try:
+					#     run_command(cmd)
+					# except Exception as e:
+					# 	print(e)
+
+					piece_counter += 1
+
+		# Option 2: Pull the entire world!
+		else:
+			layer.generate_xml("tms", datestring)
 			infile = layer.gibs_xml
+			infile = infile.replace("{Time}",  datestring)
 
-			# Build name of image output file
-			outfile = output_dir + "/" + layer.layer_name + "_" + str(piece_counter) + "." + layer.format_suffix
+			# Build name of output file
+			outfile = output_dir + "/" + layer.layer_name + "." + layer.format_suffix
+			infile = "'" + infile + "'"
+			cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES",  "-outsize", "32768", "16384", "-projwin", "-180", "90", "180", "-90", infile, outfile]
+			commands.append(' '.join(cmd))
 
-			cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES", "-outsize", "512", "512", "-projwin", str(ulx), str(uly), str(lrx), str(lry), infile, outfile]
-			try:
-			    run_command(cmd)
-			except Exception as e:
-				print(e)
+			# try:
+			#     run_command(cmd)
+			# except Exception as e:
+			# 	print(e)
 
-			piece_counter += 1
-
-# Pull the entire world!
-else:
-	layer.generate_xml("tms", date)
-	infile = layer.gibs_xml
-	infile = infile.replace("{Time}",  date)
-
-	# Build name of output file
-	outfile = output_dir + "/" + layer.layer_name + "." + layer.format_suffix
-
-	cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES",  "-outsize", "51200", "25600", "-projwin", "-180", "90", "180", "-90", infile, outfile]
-	try:
-	    run_command(cmd)
-	except Exception as e:
-		print(e)
+# Launch the commands using a thread pool
+# commands = commands[0:1]
+# print(commands)
+pool = Pool(3) # maximum of ten concurrent commands at a time
+for i, returncode in enumerate(pool.imap(partial(call, shell=True), commands)):
+    if returncode != 0:
+       print("%d command failed: %d" % (i, returncode))

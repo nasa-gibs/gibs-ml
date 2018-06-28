@@ -1,6 +1,8 @@
 *.DS_Store
-*.jpg.aux.xml
+*.aux.xml
 *.jpg
+*.png
+*.tiff
 *.wld
 
 # Byte-compiled / optimized / DLL files

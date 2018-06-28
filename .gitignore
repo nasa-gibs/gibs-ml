@@ -1,5 +1,6 @@
-/data/*
+*.jpg.aux.xml
 *.jpg
+*.wld
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

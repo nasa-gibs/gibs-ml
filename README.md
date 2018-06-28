@@ -9,7 +9,7 @@ Run ```download_data.py``` to download a GIBS dataset. The script generates [```
 
 Each layer for a day is a single image by default or can be tiled (set the ```--tiled_world``` flag).  
 
-Images are saved in the ```data/``` directory by default. 
+Images are saved in the ```data/``` directory by default. The folder structure is ```data/{EPSG code}/{YYYY-MM-DD}/```.
 
 ```
 arguments:

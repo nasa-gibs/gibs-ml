@@ -1,45 +1,135 @@
-import subprocess
+import json
+import logging
+import os
+import shutil
 
-def run_command(cmd):
+import torch
+
+class Params():
+    """Class that loads hyperparameters from a json file.
+    Example:
+    ```
+    params = Params(json_path)
+    print(params.learning_rate)
+    params.learning_rate = 0.5  # change the value of learning_rate in params
+    ```
     """
-    Runs the provided command on the terminal.
-    Arguments:
-        cmd -- the command to be executed.
+
+    def __init__(self, json_path):
+        with open(json_path) as f:
+            params = json.load(f)
+            self.__dict__.update(params)
+
+    def save(self, json_path):
+        with open(json_path, 'w') as f:
+            json.dump(self.__dict__, f, indent=4)
+            
+    def update(self, json_path):
+        """Loads parameters from json file"""
+        with open(json_path) as f:
+            params = json.load(f)
+            self.__dict__.update(params)
+
+    @property
+    def dict(self):
+        """Gives dict-like access to Params instance by `params.dict['learning_rate']"""
+        return self.__dict__
+
+
+class RunningAverage():
+    """A simple class that maintains the running average of a quantity
+    
+    Example:
+    ```
+    loss_avg = RunningAverage()
+    loss_avg.update(2)
+    loss_avg.update(4)
+    loss_avg() = 3
+    ```
     """
-    print(' '.join(cmd))
-    process = subprocess.Popen(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    process.wait()
-    for output in process.stdout:
-        if b"ERROR" in output:
-            raise Exception(error.strip())
-    for error in process.stderr:
-        raise Exception(error.strip())
+    def __init__(self):
+        self.steps = 0
+        self.total = 0
     
-def get_last_updated(metadata_json):
-    try:
-        json_file = open(metadata_json, 'r')
-    except IOError:
-        return None, None
+    def update(self, val):
+        self.total += val
+        self.steps += 1
     
-    metadata = json.load(json_file)
-    json_file.close()
-    return metadata.get("updated", None), metadata.get("date", None)
+    def __call__(self):
+        return self.total/float(self.steps)
+        
+    
+def set_logger(log_path):
+    """Set the logger to log info in terminal and file `log_path`.
+    In general, it is useful to have a logger so that every output to the terminal is saved
+    in a permanent file. Here we save it to `model_dir/train.log`.
+    Example:
+    ```
+    logging.info("Starting training...")
+    ```
+    Args:
+        log_path: (string) where to log
+    """
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
 
-def get_old_layer_info(metadata_json, layer_name):
-    try:
-        json_file = open(metadata_json, 'r')
-    except IOError:
-        return None
-    old_layer = None
-    metadata = json.load(json_file)
-    json_file.close()
-    layers = metadata.get("layers", [])
-    for layer in layers:
-        if layer.get("name", "") == layer_name:
-            old_layer = GIBSLayer(layer.get("title", ""), layer.get("source", ""), layer.get("uom", ""), layer.get("min", ""), layer.get("max", ""), layer.get("name", ""), metadata.get("epsg", ""), "", "2km", metadata.get("land", 0), "", layer.get("date", None))
-    return old_layer
+    if not logger.handlers:
+        # Logging to a file
+        file_handler = logging.FileHandler(log_path)
+        file_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s: %(message)s'))
+        logger.addHandler(file_handler)
 
-def add_error_msg(error_msg, error_msg_list):
-    if error_msg not in error_msg_list and "Could not find data for MODIS_Aqua_Cloud_Effective_Radius" not in error_msg:
-        error_msg_list.append(error_msg)
-        print(error_msg)
+        # Logging to console
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(logging.Formatter('%(message)s'))
+        logger.addHandler(stream_handler)
+
+
+def save_dict_to_json(d, json_path):
+    """Saves dict of floats in json file
+    Args:
+        d: (dict) of float-castable values (np.float, int, float, etc.)
+        json_path: (string) path to json file
+    """
+    with open(json_path, 'w') as f:
+        # We need to convert the values to float for json (it doesn't accept np.array, np.float, )
+        d = {k: float(v) for k, v in d.items()}
+        json.dump(d, f, indent=4)
+
+
+def save_checkpoint(state, is_best, checkpoint):
+    """Saves model and training parameters at checkpoint + 'last.pth.tar'. If is_best==True, also saves
+    checkpoint + 'best.pth.tar'
+    Args:
+        state: (dict) contains model's state_dict, may contain other keys such as epoch, optimizer state_dict
+        is_best: (bool) True if it is the best model seen till now
+        checkpoint: (string) folder where parameters are to be saved
+    """
+    filepath = os.path.join(checkpoint, 'last.pth.tar')
+    if not os.path.exists(checkpoint):
+        print("Checkpoint Directory does not exist! Making directory {}".format(checkpoint))
+        os.mkdir(checkpoint)
+    else:
+        print("Checkpoint Directory exists! ")
+    torch.save(state, filepath)
+    if is_best:
+        shutil.copyfile(filepath, os.path.join(checkpoint, 'best.pth.tar'))
+
+
+def load_checkpoint(checkpoint, model, optimizer=None):
+    """Loads model parameters (state_dict) from file_path. If optimizer is provided, loads state_dict of
+    optimizer assuming it is present in checkpoint.
+    Args:
+        checkpoint: (string) filename which needs to be loaded
+        model: (torch.nn.Module) model for which the parameters are loaded
+        optimizer: (torch.optim) optional: resume optimizer from checkpoint
+    """
+    if not os.path.exists(checkpoint):
+        raise("File doesn't exist {}".format(checkpoint))
+    checkpoint = torch.load(checkpoint)
+    model.load_state_dict(checkpoint['state_dict'])
+
+    if optimizer:
+        optimizer.load_state_dict(checkpoint['optim_dict'])
+
+    return checkpoint

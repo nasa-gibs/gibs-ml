@@ -49,17 +49,17 @@ gdal_twms = """<GDAL_WMS>
 
 gdal_wmts = """<GDAL_WMTS>
   <GetCapabilitiesUrl></GetCapabilitiesUrl>
-  <Layer>lb</Layer>
-  <Style>farbe</Style>
-  <TileMatrixSet>google3857</TileMatrixSet>
+  <Layer></Layer>
+  <Style></Style>
+  <TileMatrixSet></TileMatrixSet>
   <DataWindow>
-    <UpperLeftX>1800035.8827671</UpperLeftX>
-    <UpperLeftY>6161931.622311067</UpperLeftY>
-    <LowerRightX>1845677.148953537</LowerRightX>
-    <LowerRightY>6123507.385072636</LowerRightY>
+    <UpperLeftX></UpperLeftX>
+    <UpperLeftY></UpperLeftY>
+    <LowerRightX></LowerRightX>
+    <LowerRightY></LowerRightY>
   </DataWindow>
   <BandsCount>4</BandsCount>
-  <Cache />
+  <Cache/>
   <UnsafeSSL>true</UnsafeSSL>
   <ZeroBlockHttpCodes>404</ZeroBlockHttpCodes>
   <ZeroBlockOnServerException>true</ZeroBlockOnServerException>
@@ -85,11 +85,12 @@ class GIBSLayer:
         self.image_location = ""
         self.legend_location = ""
     
-    def generate_xml(self, protocol, datetime):
+    def generate_xml(self, protocol, datestring):
         """
         Populate the XML file with data fields
         Arguments: 
             protocol: "tms" or "twms"
+            datestring: date in string format
         """
         # Use the tiled WMS service
         if protocol == "twms":
@@ -99,8 +100,8 @@ class GIBSLayer:
             # Define the service URL (Tiled WMS)
             for Service in xml.findall('Service'):
                 Service.find('ServerUrl').text = "https://gibs.earthdata.nasa.gov/twms/epsg"+self.epsg+"/best/twms.cgi?"
-                Service.find('TiledGroupName').text = self.title + " tileset" # TiledGroupName is the title concatenated with 'tileset'
-                Service.find('Change').text = datetime
+                Service.find('TiledGroupName').text = self.title + " tileset" # TiledGroupName is the layer title concatenated with 'tileset'
+                Service.find('Change').text = datestring
                 
             pretty_xml = etree.tostring(xml, pretty_print=True)
             self.gibs_xml = pretty_xml.decode()

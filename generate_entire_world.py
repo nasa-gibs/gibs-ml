@@ -65,9 +65,11 @@ parser.add_argument('--epsg', action='store', type=str, dest='epsg',
               help='The numeric EPSG code of the map projection.  Default:  4326 (geographic)')
 
 # Tile zoom resolution ("e.g. 2km, 1km, etc.")
+parser.add_argument('--tiled_world', action='store_true',dest='tiled_world',
+              help='Flag to download the entire world as a series of tiled images.')
 parser.add_argument('--tile_resolution', action='store', type=str, dest='tile_resolution',
-              default=None,
-              help='The zoom resolution of the tiles. None means pull entire world (a single tile). Default:  None')
+              default="2km",
+              help='The zoom resolution of the tiles.  Default:   2km')
 
 # Output directory
 parser.add_argument('--output_dir', action='store', type=str, dest='output_dir',
@@ -79,6 +81,7 @@ args = parser.parse_args()
 
 epsg = args.epsg
 tile_resolution = args.tile_resolution
+tiled_world = args.tiled_world
 
 # Parse the date information
 if args.date_begin == "Today":
@@ -93,6 +96,11 @@ else:
 ###############################################################################
 # Read files
 ###############################################################################
+
+# Check valid tile resolution
+if  tile_resolution not in ["2km", "1km", "500m", "250m", "31.25m"]:
+	print("Invalid tile_resolution.")
+	exit()
 
 # Create output directory if it does not exist
 output_dir = args.output_dir
@@ -121,18 +129,18 @@ else:
 # Layer definitions (Most popular ones for MODIS Terra and VIIRS SNNP)
 ###############################################################################
 
-MODIS_Terra_CorrectedReflectance_TrueColor = GIBSLayer(title="MODIS TERRA", layer_name="MODIS_Terra_CorrectedReflectance_TrueColor", epsg=epsg, format="JPEG", tilematrixset="2km", time=datetime.now())
-MODIS_Terra_CorrectedReflectance_Bands367 = GIBSLayer(title="MODIS TERRA, Bands 367", layer_name="MODIS_Terra_CorrectedReflectance_Bands367", epsg=epsg, format="PNG", tilematrixset="2km", time=datetime.now())
-MODIS_Terra_Chlorophyll_A = GIBSLayer(title="MODIS Terra Chlorophyll A", layer_name="MODIS_Terra_Chlorophyll_A", epsg=epsg, format="PNG", tilematrixset="2km", time=datetime.now())
-MODIS_Terra_Land_Surface_Temp_Day = GIBSLayer(title="MODIS TERRA Daytime Land Surface Temperature", layer_name="MODIS_Terra_Land_Surface_Temp_Day", epsg=epsg, format="PNG", tilematrixset="2km", time=datetime.now())
-MODIS_Terra_NDVI_8Day = GIBSLayer(title="MODIS Terra NDVI 8Day", layer_name="MODIS_Terra_NDVI_8Day", epsg=epsg, format="PNG", tilematrixset="2km", time=datetime.now())
+MODIS_Terra_CorrectedReflectance_TrueColor = GIBSLayer(title="MODIS TERRA", layer_name="MODIS_Terra_CorrectedReflectance_TrueColor", epsg=epsg, format="JPEG", tilematrixset=tile_resolution, time=datetime.now())
+MODIS_Terra_CorrectedReflectance_Bands367 = GIBSLayer(title="MODIS TERRA, Bands 367", layer_name="MODIS_Terra_CorrectedReflectance_Bands367", epsg=epsg, format="JPEG", tilematrixset=tile_resolution, time=datetime.now())
+MODIS_Terra_Chlorophyll_A = GIBSLayer(title="MODIS Terra Chlorophyll A", layer_name="MODIS_Terra_Chlorophyll_A", epsg=epsg, format="PNG", tilematrixset=tile_resolution, time=datetime.now())
+MODIS_Terra_Land_Surface_Temp_Day = GIBSLayer(title="MODIS TERRA Daytime Land Surface Temperature", layer_name="MODIS_Terra_Land_Surface_Temp_Day", epsg=epsg, format="PNG", tilematrixset=tile_resolution, time=datetime.now())
+MODIS_Terra_NDVI_8Day = GIBSLayer(title="MODIS Terra NDVI 8Day", layer_name="MODIS_Terra_NDVI_8Day", epsg=epsg, format="PNG", tilematrixset=tile_resolution, time=datetime.now())
 
-VIIRS_SNPP_CorrectedReflectance_TrueColor = GIBSLayer(title="VIIRS SNPP True Color", layer_name="VIIRS_SNPP_CorrectedReflectance_TrueColor", epsg=epsg, format="JPEG", tilematrixset="2km", time=datetime.now())
-VIIRS_SNPP_DayNightBand_ENCC = GIBSLayer(title="VIIRS SNPP DayNightBand ENCC", layer_name="VIIRS_SNPP_DayNightBand_ENCC", epsg=epsg, format="PNG", tilematrixset="2km", time=datetime.now())
-VIIRS_SNPP_Brightness_Temp_BandI5_Day = GIBSLayer(title="VIIRS SNPP Brightness Temp BandI5 Night", layer_name="VIIRS_SNPP_Brightness_Temp_BandI5_Day", epsg=epsg, format="PNG", tilematrixset="2km", time=datetime.now())
+VIIRS_SNPP_CorrectedReflectance_TrueColor = GIBSLayer(title="VIIRS SNPP True Color", layer_name="VIIRS_SNPP_CorrectedReflectance_TrueColor", epsg=epsg, format="JPEG", tilematrixset=tile_resolution, time=datetime.now())
+VIIRS_SNPP_DayNightBand_ENCC = GIBSLayer(title="VIIRS SNPP DayNightBand ENCC", layer_name="VIIRS_SNPP_DayNightBand_ENCC", epsg=epsg, format="PNG", tilematrixset=tile_resolution, time=datetime.now())
+VIIRS_SNPP_Brightness_Temp_BandI5_Day = GIBSLayer(title="VIIRS SNPP Brightness Temp BandI5 Night", layer_name="VIIRS_SNPP_Brightness_Temp_BandI5_Day", epsg=epsg, format="PNG", tilematrixset=tile_resolution, time=datetime.now())
 
 # No data mask
-MODIS_Terra_Data_No_Data = GIBSLayer(title="MODIS TERRA Data No Data", layer_name="MODIS_Terra_Data_No_Data", epsg=epsg, format="PNG", tilematrixset="2km", time=datetime.now())
+MODIS_Terra_Data_No_Data = GIBSLayer(title="MODIS TERRA Data No Data", layer_name="MODIS_Terra_Data_No_Data", epsg=epsg, format="PNG", tilematrixset=tile_resolution, time=datetime.now())
 
 layer_dict = {
 	"MODIS_Terra_CorrectedReflectance_TrueColor": MODIS_Terra_CorrectedReflectance_TrueColor,
@@ -197,27 +205,27 @@ def get_bbox(x, y, num_x, num_y, epsg):
 # Main Loop
 ###############################################################################
 
+## TODO: Loop through layers
+## TODO: Loop through dates
+
 # Set the layer we are parsing
 layer = MODIS_Terra_CorrectedReflectance_TrueColor
 date = "2018-06-21"
 
-# Pull the entire world!
-if tile_resolution is None:
-	layer.generate_xml("tms", date)
-	infile = layer.gibs_xml
-	infile = infile.replace("{Time}",  date)
+# Create a date directory
+output_dir = output_dir + "/" + date 
+if not os.path.exists(output_dir):
+    print("Creating directory " + output_dir)
+    os.makedirs(output_dir)
 
-	# Build name of output file
-	outfile = output_dir + "/" + date + "/" + layer.layer_name + "." + layer.format_suffix
+# Pull tiled pieces
+if tiled_world:
+	# Create a tiles subdirectory
+	output_dir = output_dir + "/tiles" 
+	if not os.path.exists(output_dir):
+	    print("Creating directory " + output_dir)
+	    os.makedirs(output_dir)
 
-	cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES", infile, outfile]
-	try:
-	    run_command(cmd)
-	except Exception as e:
-		print(e)
-
-# Pull tiled resolutions
-else:
 	piece_counter = 0
 	num_x, num_y = 40, 20
 	for y in range(num_y):
@@ -229,7 +237,7 @@ else:
 			infile = layer.gibs_xml
 
 			# Build name of image output file
-			outfile = output_dir + "/" + date + "/tiles/" + layer.layer_name + "_" + str(piece_counter) + "." + layer.format_suffix
+			outfile = output_dir + "/" + layer.layer_name + "_" + str(piece_counter) + "." + layer.format_suffix
 
 			cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES", "-outsize", "512", "512", "-projwin", str(ulx), str(uly), str(lrx), str(lry), infile, outfile]
 			try:
@@ -238,3 +246,18 @@ else:
 				print(e)
 
 			piece_counter += 1
+
+# Pull the entire world!
+else:
+	layer.generate_xml("tms", date)
+	infile = layer.gibs_xml
+	infile = infile.replace("{Time}",  date)
+
+	# Build name of output file
+	outfile = output_dir + "/" + layer.layer_name + "." + layer.format_suffix
+
+	cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES",  "-outsize", "51200", "25600", infile, outfile]
+	try:
+	    run_command(cmd)
+	except Exception as e:
+		print(e)

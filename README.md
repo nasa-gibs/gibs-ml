@@ -18,7 +18,7 @@ arguments:
   --start_date          The date from which to begin (inclusive) searching back in format YYYY-MM-DD.  Default:  None (uses layer start date)
   --end_date            The date to stop (non-inclusive) searching in format YYYY-MM-DD (or "Today").  Default:  Date of last check or Today
 
-  --epsg                The numeric EPSG code of the map projection {4326:geographic, 3413:arctic, 3031:antarctic}.  Default:  4326 (geographic)
+  --epsg                The numeric EPSG code of the map projection: 4326 (geographic), 3413 (arctic), 3031 (antarctic).  Default:  4326
   
   --tiled_world         Flag to download the entire world as a series of tiled images.
 

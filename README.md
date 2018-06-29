@@ -13,7 +13,7 @@ Images are saved in the ```data/``` directory by default. The folder structure i
 
 ```
 arguments:
-  --layer_name			The layer name to download.  Default:  VIIRS_SNPP_CorrectedReflectance_TrueColor
+  --layer_name          The layer name to download.  Default:  VIIRS_SNPP_CorrectedReflectance_TrueColor
 
   --start_date          The date from which to begin (inclusive) searching back in format YYYY-MM-DD.  Default:  None (uses layer start date)
   --end_date            The date to stop (non-inclusive) searching in format YYYY-MM-DD (or "Today").  Default:  Date of last check or Today

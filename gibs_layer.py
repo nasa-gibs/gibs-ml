@@ -14,9 +14,10 @@ import json
 from lxml import etree
 
 ###############################################################################
-# XML file fefinitions
+# XML file definitions
 ###############################################################################
 
+# See XML documentation for WMS (http://www.gdal.org/frmt_wms.html)
 gdal_wms = """<GDAL_WMS>
     <Service name="TMS">
         <ServerUrl></ServerUrl>
@@ -47,6 +48,7 @@ gdal_twms = """<GDAL_WMS>
 </GDAL_WMS>
 """
 
+# See XML documentation for WTMS (http://www.gdal.org/frmt_wmts.html)
 gdal_wmts = """<GDAL_WMTS>
   <GetCapabilitiesUrl></GetCapabilitiesUrl>
   <Layer></Layer>
@@ -66,34 +68,88 @@ gdal_wmts = """<GDAL_WMTS>
 </GDAL_WMTS>
 """
 
-
 class GIBSLayer:
     """GIBS Layer"""
-    def __init__(self, title, layer_name, epsg, format, image_resolution, tile_resolution, time):
-        self.title = title
+    def __init__(self, title, layer_name, format, image_resolution, date_min):
+        self.title = title # title to use with TiledGroupName
         self.layer_name = layer_name
-        self.epsg = epsg
         self.format = format
+        self.image_resolution = image_resolution # predefined image resolution (e.g. 2km, 1km, 250m, etc.)
+        self.date_min = date_min # datestring when layer started collecting data
+
         format_extensions = {"GTiff": "tiff", "JPEG": "jpg", "PNG": "png"}
         self.format_suffix = format_extensions[format]
-
-        self.image_resolution = image_resolution # Image resolution (e.g. 2km, 1km, 250m, etc.)
-        self.tile_resolution = tile_resolution # Tile resolution (must be lower than image resolution)
-
-        self.time = time
-
-        self.gibs_xml = ""
+        self.gibs_xml = "" 
 
         self.image_location = ""
         self.legend_location = ""
     
-    def generate_xml(self, protocol, datestring):
+    def get_gibs_layer(layer_name):
+        ###############################################################################
+        # Fixed layer definitions (static method)
+        # Most popular layers for MODIS Terra and VIIRS SNNP
+        # Note: Most definitions found here (https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+Available+Imagery+Products#expand-ReferenceLayers9Layers)
+        ###############################################################################
+
+        # MODIS \ Terra
+        MODIS_Terra_CorrectedReflectance_TrueColor = GIBSLayer(title="MODIS TERRA", layer_name="MODIS_Terra_CorrectedReflectance_TrueColor", format="JPEG", image_resolution="250m", date_min="2003-01-01")
+        MODIS_Terra_CorrectedReflectance_Bands367 = GIBSLayer(title="MODIS TERRA, Bands 367", layer_name="MODIS_Terra_CorrectedReflectance_Bands367", format="JPEG", image_resolution="250m", date_min="2003-01-01")
+        MODIS_Terra_Chlorophyll_A = GIBSLayer(title="MODIS Terra Chlorophyll A", layer_name="MODIS_Terra_Chlorophyll_A", format="PNG", image_resolution="1km", date_min="2013-07-02")
+        MODIS_Terra_Land_Surface_Temp_Day = GIBSLayer(title="MODIS TERRA Daytime Land Surface Temperature", layer_name="MODIS_Terra_Land_Surface_Temp_Day", format="PNG", image_resolution="1km", date_min="2003-01-01")
+        MODIS_Terra_NDVI_8Day = GIBSLayer(title="MODIS Terra NDVI 8Day", layer_name="MODIS_Terra_NDVI_8Day", format="PNG", image_resolution="250m", date_min="2016-07-30")
+        MODIS_Terra_Data_No_Data = GIBSLayer(title="MODIS TERRA Data No Data", layer_name="MODIS_Terra_Data_No_Data", format="PNG", image_resolution="250m", date_min="2003-01-01")
+
+        # VIIRS \ SNPP
+        VIIRS_SNPP_CorrectedReflectance_TrueColor = GIBSLayer(title="VIIRS SNPP True Color", layer_name="VIIRS_SNPP_CorrectedReflectance_TrueColor", format="JPEG", image_resolution="250m", date_min="2015-11-24")
+        VIIRS_SNPP_DayNightBand_ENCC = GIBSLayer(title="VIIRS SNPP DayNightBand ENCC", layer_name="VIIRS_SNPP_DayNightBand_ENCC", format="PNG", image_resolution="500m", date_min="2016-11-30")
+        VIIRS_SNPP_Brightness_Temp_BandI5_Day = GIBSLayer(title="VIIRS SNPP Brightness Temp BandI5 Night", layer_name="VIIRS_SNPP_Brightness_Temp_BandI5_Day", format="PNG", image_resolution="250m", date_min="2017-09-17")
+
+        # Organize within dictionaries
+        basemap_layer_dict = {
+            # "MODIS_Terra_CorrectedReflectance_TrueColor": MODIS_Terra_CorrectedReflectance_TrueColor,
+            # "MODIS_Terra_CorrectedReflectance_Bands367": MODIS_Terra_CorrectedReflectance_Bands367,
+            "VIIRS_SNPP_CorrectedReflectance_TrueColor": VIIRS_SNPP_CorrectedReflectance_TrueColor, 
+        }
+
+        modis_layer_mask_dict = {
+            "MODIS_Terra_Chlorophyll_A": MODIS_Terra_Chlorophyll_A,
+            "MODIS_Terra_Land_Surface_Temp_Day": MODIS_Terra_Land_Surface_Temp_Day,
+            "MODIS_Terra_NDVI_8Day": MODIS_Terra_NDVI_8Day,
+            "MODIS_Terra_Data_No_Data": MODIS_Terra_Data_No_Data,
+        }
+
+        viirs_layer_mask_dict = {
+            "VIIRS_SNPP_DayNightBand_ENCC": VIIRS_SNPP_DayNightBand_ENCC, 
+            "VIIRS_SNPP_Brightness_Temp_BandI5_Day": VIIRS_SNPP_Brightness_Temp_BandI5_Day, 
+        }
+
+        all_layer_dict = {
+            "MODIS_Terra_CorrectedReflectance_TrueColor": MODIS_Terra_CorrectedReflectance_TrueColor,
+            "MODIS_Terra_CorrectedReflectance_Bands367": MODIS_Terra_CorrectedReflectance_Bands367,
+            "MODIS_Terra_Chlorophyll_A": MODIS_Terra_Chlorophyll_A,
+            "MODIS_Terra_Land_Surface_Temp_Day": MODIS_Terra_Land_Surface_Temp_Day,
+            "MODIS_Terra_NDVI_8Day": MODIS_Terra_NDVI_8Day,
+            "MODIS_Terra_Data_No_Data": MODIS_Terra_Data_No_Data,
+            "VIIRS_SNPP_CorrectedReflectance_TrueColor": VIIRS_SNPP_CorrectedReflectance_TrueColor, 
+            "VIIRS_SNPP_DayNightBand_ENCC": VIIRS_SNPP_DayNightBand_ENCC, 
+            "VIIRS_SNPP_Brightness_Temp_BandI5_Day": VIIRS_SNPP_Brightness_Temp_BandI5_Day, 
+        }
+
+        
+        if layer_name in all_layer_dict:
+            return all_layer_dict[layer_name]
+        else:
+            return None
+
+    def generate_xml(self, protocol, epsg, tile_resolution, datestring):
         """
         Populate the XML file with data fields
         Arguments: 
             protocol: "tms" or "twms"
+            tile_resolution: <TileLevel> field for TMS service (i.e. zoom level)
             datestring: date in string format
         """
+
         # Use the tiled WMS service
         parser = etree.XMLParser(strip_cdata=False)
         if protocol == "twms":
@@ -101,7 +157,7 @@ class GIBSLayer:
 
             # Define the service URL (Tiled WMS)
             for Service in xml.findall('Service'):
-                Service.find('ServerUrl').text = "https://gibs.earthdata.nasa.gov/twms/epsg"+self.epsg+"/best/twms.cgi?"
+                Service.find('ServerUrl').text = "https://gibs.earthdata.nasa.gov/twms/epsg"+epsg+"/best/twms.cgi?"
                 Service.find('TiledGroupName').text = self.title + " tileset" # TiledGroupName is the layer title concatenated with 'tileset'
                 Service.find('Change').text = datestring
                 
@@ -119,16 +175,16 @@ class GIBSLayer:
                 xml.find("BandsCount").text = "1"
 
             # Declared projection (defaults to value of the TileMatrixSet)
-            xml.find("Projection").text = "EPSG:" + self.epsg
+            xml.find("Projection").text = "EPSG:" + epsg
+
+            # Define the service URL (TMS)
+            for Service in xml.findall('Service'):
+                Service.find('ServerUrl').text = "https://gibs.earthdata.nasa.gov/wmts/epsg"+epsg+"/best/"+self.layer_name+"/default/{Time}/"+self.image_resolution+"/${z}/${y}/${x}."+ self.format_suffix
 
             # Zoom Level (Projections & Resolution)
-            if self.epsg == "3413" or self.epsg == "3031":
+            if epsg == "3413" or epsg == "3031":
                 # Polar Projection
                 tile_level = {"2km": "2", "1km": "3", "500m": "4", "250m": "5"}
-
-                # Define the service URL (TMS)
-                for Service in xml.findall('Service'):
-                    Service.find('ServerUrl').text = "https://gibs.earthdata.nasa.gov/wmts/epsg"+self.epsg+"/best/"+self.layer_name+"/default/{Time}/"+self.image_resolution+"/${z}/${y}/${x}."+ self.format_suffix
                 for DataWindow in xml.findall('DataWindow'):
                     # Use -4194304, 4194304, 4194304, -4194304 for the Polar projections. 
                     # This is the bounding box of the topmost tile, which matches the bounding box of the actual imagery for Polar but not for Geographic.
@@ -136,24 +192,20 @@ class GIBSLayer:
                     DataWindow.find('UpperLeftY').text = "4194304"
                     DataWindow.find('LowerRightX').text = "4194304"
                     DataWindow.find('LowerRightY').text = "-4194304"
-                    DataWindow.find('TileLevel').text = tile_level[self.tile_resolution]
+                    DataWindow.find('TileLevel').text = tile_level[tile_resolution]
                     # Use 2, 2 for Polar projections
                     DataWindow.find('TileCountX').text = "2"
                     DataWindow.find('TileCountY').text = "2"
             else:
                 # Geographic Projection
-                tile_level = {"2km": "5", "1km": "6", "500m": "7", "250m": "8", "31.25m": "11"}
-
-                # Define the service URL (TMS)
-                for Service in xml.findall('Service'):
-                    Service.find('ServerUrl').text = "https://gibs.earthdata.nasa.gov/wmts/epsg"+self.epsg+"/best/"+self.layer_name+"/default/{Time}/"+self.image_resolution+"/${z}/${y}/${x}."+ self.format_suffix
+                tile_level = {"8km": "3", "4km":"4", "2km": "5", "1km": "6", "500m": "7", "250m": "8", "31.25m": "11"}
                 for DataWindow in xml.findall('DataWindow'):
                     # Use -180.0, 90, 396.0, -198 for Geographic projection
                     DataWindow.find('UpperLeftX').text = "-180.0"
                     DataWindow.find('UpperLeftY').text = "90"
                     DataWindow.find('LowerRightX').text = "396.0"
                     DataWindow.find('LowerRightY').text = "-198"
-                    DataWindow.find('TileLevel').text = tile_level[self.tile_resolution]
+                    DataWindow.find('TileLevel').text = tile_level[tile_resolution]
                     # Use 2, 1 for Geographic projection
                     DataWindow.find('TileCountX').text = "2"
                     DataWindow.find('TileCountY').text = "1"       

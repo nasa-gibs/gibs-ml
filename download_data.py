@@ -28,10 +28,9 @@ from gibs_layer import GIBSLayer
 from utils import *
 
 from PIL import Image
-
 from lxml import etree
 
-from datetime import datetime, time, timedelta, date
+from datetime import datetime, time, date
 from dateutil.relativedelta import relativedelta
 
 from functools import partial
@@ -47,40 +46,47 @@ except:
 
 default_image = "data/Blank_RGBA_512.png"
 
-# Keep track of runtime
-log_start = datetime.now()
-print("generate_earth_tiles.py\nStart time: " + str(log_start) + "\n")
+# # Keep track of runtime
+# log_start = datetime.now()
+# print("generate_earth_tiles.py\nStart time: " + str(log_start) + "\n")
 
 ###############################################################################
 # Argument parsing
 ###############################################################################
 
-parser = argparse.ArgumentParser(description='Generate earth tiles')
+parser = argparse.ArgumentParser(description='Download the layer tiles from the GIBS API')
+
+# Layer name to download
+parser.add_argument('--layer_name', action='store', type=str, dest='layer_name',
+			  default='VIIRS_SNPP_CorrectedReflectance_TrueColor',
+			  help='The layer name to download.  Default:  VIIRS_SNPP_CorrectedReflectance_TrueColor')
 
 # Begin and end date times
-parser.add_argument('--time_begin', action='store', type=str, dest='date_begin',
+parser.add_argument('--start_date', action='store', type=str, dest='start_date',
+              default=None,
+              help='The date from which to begin (inclusive) searching back in format YYYY-MM-DD.  Default:  None (uses layer start date)')
+parser.add_argument('--end_date', action='store', type=str, dest='end_date',
               default="Today",
-              help='The date from which to begin searching back in format YYYY-MM-DD.  Default:  Today')
-parser.add_argument('--time_stop', action='store', type=str, dest='date_stop',
-              default="Today-20",
-              help='The date to stop searching in format YYYY-MM-DD.  Default:  Date of last check or Today-20')
+              help='The date to stop (non-inclusive) searching in format YYYY-MM-DD (or "Today").  Default:  Date of last check or Today')
 
 # Map projection option
 parser.add_argument('--epsg', action='store', type=str, dest='epsg',
               default='4326',
-              help='The numeric EPSG code of the map projection {4326:geographic, 3413:arctic, 3031:antarctic}.  Default:  4326 (geographic)')
+              help='The numeric EPSG code of the map projection: 4326 (geographic), 3413 (arctic), 3031 (antarctic).  Default:  4326 (geographic)')
 
-# Resolution and tiling options
+# Tiling flag options
 parser.add_argument('--tiled_world', action='store_true',dest='tiled_world',
               help='Flag to download the entire world as a series of tiled images.')
+
+# Tile resolution options 
 parser.add_argument('--tile_resolution', action='store', type=str, dest='tile_resolution',
-              default="2km",
-              help='The zoom resolution of the tiles. Must be lower than the image resolution of layer.  Default:  2km')
+              default="8km",
+              help='The zoom resolution of the tiles. Must be lower than the image resolution of layer.  Default:  8km')
 
 # Multithreading options
 parser.add_argument('--num_threads', action='store', type=int, dest='num_threads',
-              default=3,
-              help='Number of concurrent threads to launch to download images.  Default:  3')
+              default=20,
+              help='Number of concurrent threads to launch to download images.  Default:  20')
 
 # Output directory options
 parser.add_argument('--output_dir', action='store', type=str, dest='output_dir',
@@ -90,89 +96,59 @@ parser.add_argument('--output_dir', action='store', type=str, dest='output_dir',
 # Store arguments
 args = parser.parse_args()
 
+# Retrieve the GIBS layer
+layer_name = args.layer_name
+layer = GIBSLayer.get_gibs_layer(layer_name)
+if layer is None:
+	print("Invalid GIBS layer name")
+	exit()
+
+# Parse the start date (inclusive) information
+if args.start_date is None:
+    start_date = datetime.strptime(layer.date_min,"%Y-%m-%d") 
+else:
+    start_date = datetime.strptime(args.start_date,"%Y-%m-%d")
+
+# Parse the end date (non-inclusive) information
+if args.end_date == "Today":
+    end_date = datetime.now()
+else:
+    end_date = datetime.strptime(args.end_date,"%Y-%m-%d")
+
 epsg = args.epsg
-tile_resolution = args.tile_resolution
+
 tiled_world = args.tiled_world
-num_threads = args.num_threads
-
-# Parse the date information
-if args.date_begin == "Today":
-    date_begin = datetime.now()
-else:
-    date_begin = datetime.strptime(args.date_begin,"%Y-%m-%d")
-if args.date_stop == "Today-20":
-    date_stop = datetime.now() - timedelta(days=20)
-else:
-    date_stop = datetime.strptime(args.date_stop,"%Y-%m-%d")
-
-###############################################################################
-# Read files
-###############################################################################
 
 # Check valid tile resolution
-if  tile_resolution not in ["2km", "1km", "500m", "250m", "31.25m"]:
+tile_resolution = args.tile_resolution
+if  tile_resolution not in ["8km", "4km", "2km", "1km", "500m", "250m", "31.25m"]:
 	print("Invalid tile_resolution.")
 	exit()
 
-# Create output directory if it does not exist
+num_threads = args.num_threads
+
+# Check if output directory exists
 output_dir = args.output_dir
 if output_dir[0] != '/':
     output_dir = os.getcwd() +'/' + output_dir
 
 if os.path.exists(output_dir):
     output_dir = output_dir + "/" + epsg
-    print("Outputting to " + output_dir)
 else:
-    exit()
+	print("Could not find directory " + output_dir)
+	exit()
 
+# Create EPSG code subdirectory if it does not exist (e.g. ./data/4326/)
 if not os.path.exists(output_dir):
     print("Creating directory " + output_dir)
     os.makedirs(output_dir)
 
 # Print out arguments
+print("Downloading layer: " + layer_name)
+print("Using Tiles: " + str(tiled_world))
+print("Dates Range: " + datetime.strftime(start_date,"%Y-%m-%d") + " (inclusive) up to " + datetime.strftime(end_date,"%Y-%m-%d") + " (non-inclusive)")
 print("Map Projection: EPSG" + epsg)
 print("Output directory: " + output_dir)
-if args.date_stop == "Today-20":
-    print("Search dates: " + datetime.strftime(date_begin,"%Y-%m-%d"))
-else:
-    print("Search dates: " + datetime.strftime(date_begin,"%Y-%m-%d") + " to " + datetime.strftime(date_stop,"%Y-%m-%d"))
-
-###############################################################################
-# Layer definitions (Most popular ones for MODIS Terra and VIIRS SNNP)
-###############################################################################
-
-MODIS_Terra_CorrectedReflectance_TrueColor = GIBSLayer(title="MODIS TERRA", layer_name="MODIS_Terra_CorrectedReflectance_TrueColor", epsg=epsg, format="JPEG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
-MODIS_Terra_CorrectedReflectance_Bands367 = GIBSLayer(title="MODIS TERRA, Bands 367", layer_name="MODIS_Terra_CorrectedReflectance_Bands367", epsg=epsg, format="JPEG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
-MODIS_Terra_Chlorophyll_A = GIBSLayer(title="MODIS Terra Chlorophyll A", layer_name="MODIS_Terra_Chlorophyll_A", epsg=epsg, format="PNG", image_resolution="1km", tile_resolution=tile_resolution, time=datetime.now())
-MODIS_Terra_Land_Surface_Temp_Day = GIBSLayer(title="MODIS TERRA Daytime Land Surface Temperature", layer_name="MODIS_Terra_Land_Surface_Temp_Day", epsg=epsg, format="PNG", image_resolution="1km", tile_resolution=tile_resolution, time=datetime.now())
-MODIS_Terra_NDVI_8Day = GIBSLayer(title="MODIS Terra NDVI 8Day", layer_name="MODIS_Terra_NDVI_8Day", epsg=epsg, format="PNG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
-
-VIIRS_SNPP_CorrectedReflectance_TrueColor = GIBSLayer(title="VIIRS SNPP True Color", layer_name="VIIRS_SNPP_CorrectedReflectance_TrueColor", epsg=epsg, format="JPEG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
-VIIRS_SNPP_DayNightBand_ENCC = GIBSLayer(title="VIIRS SNPP DayNightBand ENCC", layer_name="VIIRS_SNPP_DayNightBand_ENCC", epsg=epsg, format="PNG", image_resolution="500m", tile_resolution=tile_resolution, time=datetime.now())
-VIIRS_SNPP_Brightness_Temp_BandI5_Day = GIBSLayer(title="VIIRS SNPP Brightness Temp BandI5 Night", layer_name="VIIRS_SNPP_Brightness_Temp_BandI5_Day", epsg=epsg, format="PNG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
-
-# No data mask
-MODIS_Terra_Data_No_Data = GIBSLayer(title="MODIS TERRA Data No Data", layer_name="MODIS_Terra_Data_No_Data", epsg=epsg, format="PNG", image_resolution="250m", tile_resolution=tile_resolution, time=datetime.now())
-
-basemap_layer_dict = {
-	"MODIS_Terra_CorrectedReflectance_TrueColor": MODIS_Terra_CorrectedReflectance_TrueColor,
-	"MODIS_Terra_CorrectedReflectance_Bands367": MODIS_Terra_CorrectedReflectance_Bands367,
-	"VIIRS_SNPP_CorrectedReflectance_TrueColor": VIIRS_SNPP_CorrectedReflectance_TrueColor, 
-}
-
-layer_dict = {
-	"MODIS_Terra_CorrectedReflectance_TrueColor": MODIS_Terra_CorrectedReflectance_TrueColor,
-	"MODIS_Terra_CorrectedReflectance_Bands367": MODIS_Terra_CorrectedReflectance_Bands367,
-	"MODIS_Terra_Chlorophyll_A": MODIS_Terra_Chlorophyll_A,
-	"MODIS_Terra_Land_Surface_Temp_Day": MODIS_Terra_Land_Surface_Temp_Day,
-	"MODIS_Terra_NDVI_8Day": MODIS_Terra_NDVI_8Day,
-
-	"VIIRS_SNPP_CorrectedReflectance_TrueColor": VIIRS_SNPP_CorrectedReflectance_TrueColor, 
-	"VIIRS_SNPP_DayNightBand_ENCC": VIIRS_SNPP_DayNightBand_ENCC, 
-	"VIIRS_SNPP_Brightness_Temp_BandI5_Day": VIIRS_SNPP_Brightness_Temp_BandI5_Day, 
-
-	"MODIS_Terra_Data_No_Data": MODIS_Terra_Data_No_Data,
-}
 
 ###############################################################################
 # Helper functions
@@ -219,10 +195,6 @@ def get_bbox(x, y, num_x, num_y, epsg):
 	#     lry = y - 32768
 	return ulx, uly, lrx, lry
 
-def daterange(start_date, end_date):
-    for n in range(int ((end_date - start_date).days)):
-        yield start_date + timedelta(n)
-
 ###############################################################################
 # Main Loop
 ###############################################################################
@@ -234,11 +206,8 @@ commands = []
 output_root_dir = output_dir
 
 # Loop through dates
-start_date = date(2016, 1, 1)
-end_date = date(2018, 6, 27)
 for single_date in daterange(start_date, end_date):
 	datestring = single_date.strftime("%Y-%m-%d")
-	# print(datestring)
 
 	# Create a date directory
 	output_dir = output_root_dir + "/" + datestring 
@@ -246,58 +215,60 @@ for single_date in daterange(start_date, end_date):
 	    print("Creating directory " + output_dir)
 	    os.makedirs(output_dir)
 
-	# Loop through the layers
-	for layer_name, layer in basemap_layer_dict.items():
-		# Option 1: Pull tiled pieces
-		if tiled_world:
-			# Create a tiles subdirectory
-			output_dir = output_dir + "/tiles" 
-			if not os.path.exists(output_dir):
-			    print("Creating directory " + output_dir)
-			    os.makedirs(output_dir)
+	# Option 1: Pull tiled pieces
+	if tiled_world:
+		# Create a tiles subdirectory
+		output_dir = output_dir + "/tiles" 
+		if not os.path.exists(output_dir):
+		    print("Creating directory " + output_dir)
+		    os.makedirs(output_dir)
 
-			piece_counter = 0
-			num_x, num_y = 40, 20
-			for y in range(num_y):
-				for x in range(num_x):
-					ulx, uly, lrx, lry = get_bbox(x, y, num_x, num_y, epsg)
+		piece_counter = 0
+		num_x, num_y = 40, 20
+		for y in range(num_y):
+			for x in range(num_x):
+				ulx, uly, lrx, lry = get_bbox(x, y, num_x, num_y, epsg)
 
-					# Build the XML input file
-					layer.generate_xml("twms", datestring)
-					infile = layer.gibs_xml
+				# Build the XML input file
+				layer.generate_xml(protocol="twms", epsg=epsg, tile_resolution=tile_resolution, datestring=datestring)
+				infile = layer.gibs_xml
 
-					# Build name of image output file
-					infile = "'" + infile + "'" # add extra quotes around XML
-					outfile = output_dir + "/" + layer.layer_name + "_" + str(piece_counter) + "." + layer.format_suffix
+				# Build name of image output file
+				infile = "'" + infile + "'" # add extra quotes around XML
+				outfile = output_dir + "/" + layer.layer_name + "_" + str(piece_counter) + "." + layer.format_suffix
 
-					# Build command string
-					cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES", "-outsize", "512", "512", "-projwin", str(ulx), str(uly), str(lrx), str(lry), infile, outfile]
-					commands.append(' '.join(cmd))
-					# try:
-					#     run_command(cmd)
-					# except Exception as e:
-					# 	print(e)
+				# Build command string
+				cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES", "-outsize", "512", "512", "-projwin", str(ulx), str(uly), str(lrx), str(lry), infile, outfile]
+				commands.append(' '.join(cmd))
+				# try:
+				#     run_command(cmd)
+				# except Exception as e:
+				# 	print(e)
 
-					piece_counter += 1
+				piece_counter += 1
 
-		# Option 2: Pull the entire world as a single image
-		else:
-			layer.generate_xml("tms", datestring)
-			infile = layer.gibs_xml
-			infile = infile.replace("{Time}",  datestring)
+	# Option 2: Pull the entire world as a single image
+	else:
+		layer.generate_xml(protocol="tms", epsg=epsg, tile_resolution=tile_resolution, datestring=datestring)
+		infile = layer.gibs_xml
+		infile = infile.replace("{Time}",  datestring)
 
-			# Build name of output file
-			infile = "'" + infile + "'" # add extra quotes around XML
-			outfile = output_dir + "/" + layer.layer_name + "." + layer.format_suffix
+		# Build name of output file
+		infile = "'" + infile + "'" # add extra quotes around XML
+		outfile = output_dir + "/" + layer.layer_name + "." + layer.format_suffix
 
-			# Build command string
-			cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES",  "-outsize", "32768", "16384", "-projwin", "-180", "90", "180", "-90", infile, outfile]
-			commands.append(' '.join(cmd))
+		# Build command string
+		cmd = ["gdal_translate", "-of", layer.format, "-co", "WORLDFILE=YES",  "-outsize", "8192", "4096", "-projwin", "-180", "90", "180", "-90", infile, outfile]
+		commands.append(' '.join(cmd))
 
-			# try:
-			#     run_command(cmd)
-			# except Exception as e:
-			# 	print(e)
+		# try:
+		#     run_command(cmd)
+		# except Exception as e:
+		# 	print(e)
+
+###############################################################################
+# Launch threadpool to issue GDAL commands to download and stitch together images 
+###############################################################################
 
 # Launch the commands using a thread pool
 pool = Pool(num_threads) # maximum of ten concurrent commands at a time

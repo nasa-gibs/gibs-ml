@@ -2,8 +2,13 @@ import json
 import logging
 import os
 import shutil
+from datetime import timedelta
 
 import torch
+
+def daterange(start_date, end_date):
+    for n in range(int ((end_date - start_date).days)):
+        yield start_date + timedelta(n)
 
 class Params():
     """Class that loads hyperparameters from a json file.

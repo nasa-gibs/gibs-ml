@@ -91,16 +91,16 @@ class GIBSLayer:
         # Note: Most definitions found here (https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+Available+Imagery+Products#expand-ReferenceLayers9Layers)
         ###############################################################################
 
-        # MODIS \ Terra
+        # MODIS \ Terra, VIIRS \ SNPP
         MODIS_Terra_CorrectedReflectance_TrueColor = GIBSLayer(title="MODIS TERRA", layer_name="MODIS_Terra_CorrectedReflectance_TrueColor", format="JPEG", image_resolution="250m", date_min="2003-01-01")
         MODIS_Terra_CorrectedReflectance_Bands367 = GIBSLayer(title="MODIS TERRA, Bands 367", layer_name="MODIS_Terra_CorrectedReflectance_Bands367", format="JPEG", image_resolution="250m", date_min="2003-01-01")
-        MODIS_Terra_Chlorophyll_A = GIBSLayer(title="MODIS Terra Chlorophyll A", layer_name="MODIS_Terra_Chlorophyll_A", format="PNG", image_resolution="1km", date_min="2013-07-02")
         MODIS_Terra_Land_Surface_Temp_Day = GIBSLayer(title="MODIS TERRA Daytime Land Surface Temperature", layer_name="MODIS_Terra_Land_Surface_Temp_Day", format="PNG", image_resolution="1km", date_min="2003-01-01")
-        MODIS_Terra_NDVI_8Day = GIBSLayer(title="MODIS Terra NDVI 8Day", layer_name="MODIS_Terra_NDVI_8Day", format="PNG", image_resolution="250m", date_min="2016-07-30")
         MODIS_Terra_Data_No_Data = GIBSLayer(title="MODIS TERRA Data No Data", layer_name="MODIS_Terra_Data_No_Data", format="PNG", image_resolution="250m", date_min="2003-01-01")
 
-        # VIIRS \ SNPP
+        MODIS_Terra_Chlorophyll_A = GIBSLayer(title="MODIS Terra Chlorophyll A", layer_name="MODIS_Terra_Chlorophyll_A", format="PNG", image_resolution="1km", date_min="2013-07-02")
+
         VIIRS_SNPP_CorrectedReflectance_TrueColor = GIBSLayer(title="VIIRS SNPP True Color", layer_name="VIIRS_SNPP_CorrectedReflectance_TrueColor", format="JPEG", image_resolution="250m", date_min="2015-11-24")
+        MODIS_Terra_NDVI_8Day = GIBSLayer(title="MODIS Terra NDVI 8Day", layer_name="MODIS_Terra_NDVI_8Day", format="PNG", image_resolution="250m", date_min="2016-07-30")
         VIIRS_SNPP_DayNightBand_ENCC = GIBSLayer(title="VIIRS SNPP DayNightBand ENCC", layer_name="VIIRS_SNPP_DayNightBand_ENCC", format="PNG", image_resolution="500m", date_min="2016-11-30")
         VIIRS_SNPP_Brightness_Temp_BandI5_Day = GIBSLayer(title="VIIRS SNPP Brightness Temp BandI5 Night", layer_name="VIIRS_SNPP_Brightness_Temp_BandI5_Day", format="PNG", image_resolution="250m", date_min="2017-09-17")
 

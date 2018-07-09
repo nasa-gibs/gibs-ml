@@ -107,6 +107,7 @@ if layer is None:
 if args.start_date is None:
     start_date = datetime.strptime(layer.date_min,"%Y-%m-%d") 
 else:
+	if datetime.strptime(args.start_date,"%Y-%m-%d") < datetime.strptime(layer.date_min,"%Y-%m-%d") 
     start_date = datetime.strptime(args.start_date,"%Y-%m-%d")
 
 # Parse the end date (non-inclusive) information

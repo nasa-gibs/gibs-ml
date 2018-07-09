@@ -91,7 +91,7 @@ parser.add_argument('--num_threads', action='store', type=int, dest='num_threads
 # Output directory options
 parser.add_argument('--output_dir', action='store', type=str, dest='output_dir',
               default='data',
-              help='Full path of output directory.  Default:  ./data')
+              help='Full path of output directory.  Default:  data')
 
 # Store arguments
 args = parser.parse_args()

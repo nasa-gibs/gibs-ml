@@ -12,7 +12,8 @@ class LinearClassifier(object):
   def __init__(self):
     self.W = None
 
-  def train(self, X, y, learning_rate=1e-3, reg=1e-5, num_iters=100,
+  def train(self, X, y, X_val, y_val, 
+            learning_rate=1e-3, reg=1e-5, num_iters=100,
             batch_size=200, verbose=False):
     """
     Train this linear classifier using stochastic gradient descent.
@@ -32,6 +33,7 @@ class LinearClassifier(object):
     A list containing the value of the loss function at each training iteration.
     """
     num_train, dim = X.shape
+    iterations_per_epoch = max(int(num_train / batch_size), 1)
     num_classes = np.max(y) + 1 # assume y takes values 0...K-1 where K is number of classes
     if self.W is None:
       # lazily initialize W
@@ -39,6 +41,9 @@ class LinearClassifier(object):
 
     # Run stochastic gradient descent to optimize W
     loss_history = []
+    train_acc_history = []
+    val_acc_history = []
+
     for it in xrange(num_iters):
       X_batch = None
       y_batch = None
@@ -58,8 +63,20 @@ class LinearClassifier(object):
 
       if verbose and it % 100 == 0:
         print('iteration %d / %d: loss %f' % (it, num_iters, loss))
+      
+      # Every epoch, check train and val accuracy and decay learning rate.
+      if it % iterations_per_epoch == 0:
+        # Check accuracy
+        train_acc = (self.predict(X_batch)[1] == y_batch).mean()
+        val_acc = (self.predict(X_val)[1] == y_val).mean()
+        train_acc_history.append(train_acc)
+        val_acc_history.append(val_acc)
 
-    return loss_history
+    return {
+      'loss_history': loss_history,
+      'train_acc_history': train_acc_history,
+      'val_acc_history': val_acc_history,
+    }
 
   def predict(self, X):
     """

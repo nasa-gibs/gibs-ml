@@ -23,9 +23,12 @@ def svm_loss(W, X, y, reg):
   loss = 0.0
   dW = np.zeros(W.shape) # initialize the gradient as zero
 
-  # compute the loss and the gradient
   num_classes = W.shape[1] # = C
   num_train = X.shape[0] # = N
+
+  ###############################################################################
+  # Compute the loss
+  ###############################################################################
 
   scores = X.dot(W) # N x C   
   correct_class_scores = np.matrix(scores[np.arange(num_train), y]).T
@@ -41,12 +44,21 @@ def svm_loss(W, X, y, reg):
   # Add regularization to the loss.
   loss += reg * np.sum(W * W)
 
+  ###############################################################################
+  # Compute the gradient in dW
+  ###############################################################################
+
   binary = margins # N x C
   binary[margins > 0] = 1  
   row_sum = np.sum(binary, axis=1) # N
   binary[np.arange(num_train), y] = -row_sum.T
 
+  # Right now the loss is a sum across all training examples but we want it 
+  # to be an avaerage so we divide by num_train
   dW = np.dot(X.T, binary)
   dW /= num_train
+
+  # Add regularization to the gradient
+  dW += reg * W
 
   return loss, dW

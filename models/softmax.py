@@ -25,19 +25,40 @@ def softmax_loss (W, X, y, reg):
   dW = np.zeros_like(W)
 
   num_train = X.shape[0]
+
+  ###############################################################################
+  # Compute the loss
+  ###############################################################################
+
+  # Compute the class predictions
   scores = X.dot(W) # [N x D] x [D x C] = [N x C]
-  scores -= np.max(scores,axis=1,keepdims=True)
+  scores -= np.max(scores,axis=1,keepdims=True) # subtract max for numerical stability 
+
+  # Calculate the probabilities
   probabilities = np.exp(scores) / np.sum(np.exp(scores),axis=1,keepdims=True)
   correct_class_probabilities = probabilities[range(num_train),y]
 
   # Summarize across classes that are incorrectly classified
-  loss = np.sum(-np.log(correct_class_probabilities)) / num_train
+  loss = np.sum(-np.log(correct_class_probabilities))
+
+  # Right now the loss is a sum across all training examples but we want it 
+  # to be an avaerage so we divide by num_train
+  loss /= num_train
+
+  # Add regularization to the loss
   loss += 0.5 * reg * np.sum(W*W)
 
-  # Subtract 1 class for each case (a total of N) that are correctly classified
-  probabilities[range(num_train),y] -= 1
+  ###############################################################################
+  # Compute the gradient in dW
+  ###############################################################################
 
-  dW = X.T.dot(probabilities) / num_train
+  # Compute the gradient
+  probabilities[range(num_train),y] -= 1 # subtract 1 class for each case (a total of N) that are correctly classified
+  dW = X.T.dot(probabilities)
+  dW /= num_train
+  
+  # Add regularization to the gradient
+  dW += reg * W
 
   return loss, dW
 

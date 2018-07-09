@@ -7,52 +7,84 @@ from shutil import copyfile
 from PIL import Image
 from tqdm import tqdm
 
-# training-val-dev split
-TRAIN_CUTOFF = 0.70
+from datetime import datetime, time, timedelta, date
+from dateutil.relativedelta import relativedelta
+from utils import daterange
 
-# directory pointing to all .jpg files
-input_directory = 'data/TINYSAT'
+###############################################################################
+# Constants
+###############################################################################
+layer_name = 'VIIRS_SNPP_CorrectedReflectance_TrueColor'
 
-# experiment directories
-output_directory = 'data'
+# Start and end dates for the labels
+start_date = date(2015, 11, 24)
+end_date = date(2018, 6, 27)
 
-if __name__ == '__main__':
+# train-val-test split (60-20-20)
+TRAIN_CUTOFF = 0.60
+VAL_CUTOFF = 0.80
 
-    assert os.path.isdir(input_directory), "Couldn't find the dataset at {}".format(input_directory)
+# directory pointing to date subdirectories
+data_dir = 'data/4326'
+labels_file = os.path.join(data_dir, layer_name + ".txt")
+split_labels_file = os.path.join(data_dir, "split_" + layer_name + ".txt")
 
-    # Get the filenames in the input directory
-    filenames = os.listdir(input_directory)
-    filenames = [os.path.join(input_directory, f) for f in filenames if f.endswith('.jpg')]
+###############################################################################
+# File checking
+###############################################################################
+assert os.path.isdir(data_dir), "Couldn't find the dataset at {}".format(data_dir)
 
-    # Make sure to always shuffle with a fixed seed so that the split is reproducible
-    random.seed(999)
-    filenames.sort()
-    random.shuffle(filenames)
+# Generate labels file if non-existent
+if not os.path.exists(labels_file):
+    print("Making labels file {}".format(labels_file))
+    with open(labels_file, "w") as f:
+        # Loop through dates
+        for single_date in daterange(start_date, end_date):
+            datestring = single_date.strftime("%Y-%m-%d")
+            f.write(datestring + " \n")
 
-    # Split the image into 70% train and 30% val
-    first_split = int(TRAIN_CUTOFF * len(filenames))
-    train_filenames = filenames[:first_split]
-    val_filenames = filenames[first_split:]
+###############################################################################
+# Add split to the labels file
+###############################################################################
 
-    filenames = {'train': train_filenames,
-                 'val': val_filenames}
+# Count the number of examples in the dataset
+N = sum(1 for line in open(labels_file))
+print("There are {} total examples in the dataset".format(N))
 
-    if not os.path.exists(output_directory):
-        os.mkdir(output_directory)
+# Split the dataset into train-val-test
+first_split = int(TRAIN_CUTOFF * N)
+second_split = int(VAL_CUTOFF * N)
+
+split_names = [""] * N
+for idx in range(N):
+    if idx < first_split:
+        split_names[idx] = "train"
+    elif idx < second_split:
+        split_names[idx] = "val"
     else:
-        print("Warning: output dir {} already exists".format(output_directory))
+        split_names[idx] = "test"
 
-    # Pre-process train and validation sets
-    for split in ['train', 'val']:
-        output_dir_split = os.path.join(output_directory, '{}'.format(split))
-        if not os.path.exists(output_dir_split):
-            os.mkdir(output_dir_split)
-        else:
-            print("Warning: dir {} already exists".format(output_dir_split))
+# # Make sure to always shuffle with a fixed seed so that the split is reproducible
+random.seed(999)
+split_names.sort()
+random.shuffle(split_names)
 
-        print("Processing {} data, saving preprocessed data to {}".format(split, output_dir_split))
-        for filename in tqdm(filenames[split]):
-            img_name = os.path.split(filename)[-1]
-            copyfile(filename, os.path.join(output_dir_split, img_name))
+with open(labels_file, "r") as f:
+    with open(split_labels_file, "w") as split_f:
+        for idx, line in enumerate(f):
+            split_f.write(split_names[idx] + " " + line)
 
-    print("Done building dataset")
+print("Done updating labels file")
+
+# # Pre-process train and validation sets
+# for split in ['train', 'val']:
+#     output_dir_split = os.path.join(output_directory, '{}'.format(split))
+#     if not os.path.exists(output_dir_split):
+#         os.mkdir(output_dir_split)
+#     else:
+#         print("Warning: dir {} already exists".format(output_dir_split))
+
+#     print("Processing {} data, saving preprocessed data to {}".format(split, output_dir_split))
+#     for filename in tqdm(filenames[split]):
+#         img_name = os.path.split(filename)[-1]
+#         copyfile(filename, os.path.join(output_dir_split, img_name))

@@ -4,6 +4,8 @@
 *.png
 *.tiff
 *.wld
+experiments/base_model/*
+experiments/pretrained_model/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

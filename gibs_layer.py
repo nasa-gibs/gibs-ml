@@ -36,6 +36,9 @@ gdal_wms = """<GDAL_WMS>
     <BlockSizeX>512</BlockSizeX>
     <BlockSizeY>512</BlockSizeY>
     <BandsCount>3</BandsCount>
+    <MaxConnections>5</MaxConnections>
+    <Timeout>3000</Timeout>
+    <UnsafeSSL>true</UnsafeSSL> 
 </GDAL_WMS>
 """
 
@@ -198,7 +201,7 @@ class GIBSLayer:
                     DataWindow.find('TileCountY').text = "2"
             else:
                 # Geographic Projection
-                tile_level = {"8km": "3", "4km":"4", "2km": "5", "1km": "6", "500m": "7", "250m": "8", "31.25m": "11"}
+                tile_level = {"16km":"2", "8km": "3", "4km": "4", "2km": "5", "1km": "6", "500m": "7", "250m": "8", "31.25m": "11"}
                 for DataWindow in xml.findall('DataWindow'):
                     # Use -180.0, 90, 396.0, -198 for Geographic projection
                     DataWindow.find('UpperLeftX').text = "-180.0"

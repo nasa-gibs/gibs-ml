@@ -5,46 +5,17 @@ import torch
 
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
-import torchvision.transforms as transforms
 
 import cv2
 
 import scipy
 from scipy import ndimage
 
-# Apply normalization for Densenet pretrained model
-normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                std=[0.229, 0.224, 0.225])
-
-# Set the image dimension
-IMG_DIM = (128, 256)
-IMG_PADDING = (0, 64, 0, 64) # left, top, right, bottom borders
-
-# borrowed from http://pytorch.org/tutorials/advanced/neural_style_tutorial.html
-# and http://pytorch.org/tutorials/beginner/data_loading_tutorial.html
-# define a training image loader that specifies transforms on images. See documentation for more details.
-train_transformer = transforms.Compose([
-    transforms.Resize(IMG_DIM),  # resize the image 
-    transforms.Pad(IMG_PADDING, 0, 'constant'), # pad to be square!
-    transforms.RandomHorizontalFlip(),  # randomly flip image horizontally
-    transforms.RandomVerticalFlip(), # randomly flip image vertically
-    transforms.ToTensor(), # transform it into a torch tensor
-    # normalize,
-    ])  
-
-# loader for evaluation, no data augmentation (e.g. horizontal flip)
-eval_transformer = transforms.Compose([
-    transforms.Resize(IMG_DIM),  # resize the image
-    transforms.Pad(IMG_PADDING, 0, 'constant'), # pad to be square!
-    transforms.ToTensor(), # transform it into a torch tensor
-    # normalize,
-    ])  
-
 class SatelliteDataset(Dataset):
     """
     A standard PyTorch definition of Dataset which defines the functions __len__ and __getitem__.
     """    
-    def __init__(self, data_dir, layer_name, label_split_file, split, transform):
+    def __init__(self, data_dir, layer_name, label_split_file, split, transform, img_binarize):
         """
         Store the filenames of the jpgs to use. Specifies transforms to apply on images.
 
@@ -96,6 +67,7 @@ class SatelliteDataset(Dataset):
 
         self.filenames, self.labels = load_layer_split()
         self.transform = transform
+        self.img_binarize = img_binarize
 
     def __len__(self):
         # return size of dataset
@@ -113,48 +85,43 @@ class SatelliteDataset(Dataset):
             label: (int) corresponding label of image
         """
         image = Image.open(self.filenames[idx])  # PIL image
+        
+        if self.img_binarize:
+            # Grayscale and black and white the image!
+            image = np.asarray(image)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            _, image = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY)            
+            image = Image.fromarray(image)
 
-        # Grayscale and black and white the image!
-        image = np.asarray(image)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        _, image = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY)            
-        image = Image.fromarray(image)
-
-        # print(image.size)
         image = self.transform(image)
-        # print(image.size())
         return image, self.labels[idx]
 
 
-def fetch_dataloader(types, data_dir, layer_name, label_split_file, params):
+def fetch_dataloader(split, transformer, data_dir, layer_name, label_split_file, params, img_binarize):
     """
     Fetches the DataLoader object for each type in types from data_dir.
 
     Args:
-        types: (list) has one or more of 'train', 'val', 'test' depending on which data is required
+        split: (string) has one of 'train', 'val', 'test' depending on which data is required
         data_dir: (string) directory containing the dataset
         label_split_file: (string) filename containing the dataset label and split metadata
         params: (Params) hyperparameters
 
     Returns:
-        data: (dict) contains the DataLoader object for each type in types
-    """
-    dataloaders = {}
+        data: DataLoader object for split
+    """    
 
-    for split in ['train', 'val', 'test']:
-        if split in types:
-            # use the train_transformer if training data, else use eval_transformer without random flip
-            if split == 'train':
-                # Oversample the training set to deal with class imbalance
-                class_sample_count = [495, 72] # training dataset has 10 class-0 samples, 1 class-1 samples, etc.
-                # num_samples = sum(class_sample_count)
-                # weights = 1 / torch.Tensor(class_sample_count)
-                # sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, num_samples)
-                # Must set 'shuffle' to False
-                dl = DataLoader(SatelliteDataset(data_dir, layer_name, label_split_file, split, train_transformer), batch_size=params.batch_size, sampler=None, shuffle=True, num_workers=params.num_workers, pin_memory=params.cuda)
-            else:
-                dl = DataLoader(SatelliteDataset(data_dir, layer_name, label_split_file, split, eval_transformer), batch_size=params.batch_size, shuffle=False, num_workers=params.num_workers, pin_memory=params.cuda)
+    dataloader = None
+        
+    if split == 'train':
+        # Oversample the training set to deal with class imbalance
+        class_sample_count = [495, 72] # training dataset has 10 class-0 samples, 1 class-1 samples, etc.
+        # num_samples = sum(class_sample_count)
+        # weights = 1 / torch.Tensor(class_sample_count)
+        # sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, num_samples)
+        # Must set 'shuffle' to False
+        dataloader = DataLoader(SatelliteDataset(data_dir, layer_name, label_split_file, split, transformer, img_binarize), batch_size=params.batch_size, sampler=None, shuffle=True, num_workers=params.num_workers, pin_memory=params.cuda)
+    elif split == 'val' or split == 'test':
+        dataloader = DataLoader(SatelliteDataset(data_dir, layer_name, label_split_file, split, transformer, img_binarize), batch_size=params.batch_size, shuffle=False, num_workers=params.num_workers, pin_memory=params.cuda)
 
-            dataloaders[split] = dl
-
-    return dataloaders
+    return dataloader

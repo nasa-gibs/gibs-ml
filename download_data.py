@@ -37,14 +37,12 @@ from functools import partial
 from multiprocessing.dummy import Pool
 from subprocess import call
 
-# Test GDAL/OGR installation
+# Test GDAL installation
 # Try `conda install gdal` otherwise
 try:
-    from osgeo import ogr, osr, gdal
+    from osgeo import gdal, ogr
 except:
-    sys.exit('ERROR: cannot find GDAL/OGR modules')
-
-default_image = "data/Blank_RGBA_512.png"
+    sys.exit('ERROR: Cannot find GDAL module')
 
 # # Keep track of runtime
 # log_start = datetime.now()
@@ -58,8 +56,8 @@ parser = argparse.ArgumentParser(description='Download the layer tiles from the 
 
 # Layer name to download
 parser.add_argument('--layer_name', action='store', type=str, dest='layer_name',
-			  default='VIIRS_SNPP_CorrectedReflectance_TrueColor',
-			  help='The layer name to download.  Default:  VIIRS_SNPP_CorrectedReflectance_TrueColor')
+			  default='MODIS_Terra_CorrectedReflectance_TrueColor',
+			  help='The layer name to download.  Default:  MODIS_Terra_CorrectedReflectance_TrueColor')
 
 # Begin and end date times
 parser.add_argument('--start_date', action='store', type=str, dest='start_date',
@@ -80,13 +78,13 @@ parser.add_argument('--tiled_world', action='store_true',dest='tiled_world',
 
 # Tile resolution options 
 parser.add_argument('--tile_resolution', action='store', type=str, dest='tile_resolution',
-              default="8km",
-              help='The zoom resolution of the tiles. Must be lower than the image resolution of layer.  Default:  8km')
+              default="16km",
+              help='The zoom resolution of the tiles. Must be lower than the image resolution of layer.  Default:  16km')
 
 # Multithreading options
 parser.add_argument('--num_threads', action='store', type=int, dest='num_threads',
-              default=20,
-              help='Number of concurrent threads to launch to download images.  Default:  20')
+              default=10,
+              help='Number of concurrent threads to launch to download images.  Default:  10')
 
 # Output directory options
 parser.add_argument('--output_dir', action='store', type=str, dest='output_dir',
@@ -107,8 +105,11 @@ if layer is None:
 if args.start_date is None:
     start_date = datetime.strptime(layer.date_min,"%Y-%m-%d") 
 else:
-	if datetime.strptime(args.start_date,"%Y-%m-%d") < datetime.strptime(layer.date_min,"%Y-%m-%d") 
-    start_date = datetime.strptime(args.start_date,"%Y-%m-%d")
+	if datetime.strptime(args.start_date,"%Y-%m-%d") < datetime.strptime(layer.date_min,"%Y-%m-%d"):
+		print("No layer data from {}. Will begin from {} instead".format(datetime.strptime(args.start_date,"%Y-%m-%d"),  datetime.strptime(layer.date_min,"%Y-%m-%d")))
+		start_date = datetime.strptime(layer.date_min,"%Y-%m-%d")
+	else:
+		start_date = datetime.strptime(args.start_date,"%Y-%m-%d")
 
 # Parse the end date (non-inclusive) information
 if args.end_date == "Today":
@@ -116,13 +117,15 @@ if args.end_date == "Today":
 else:
     end_date = datetime.strptime(args.end_date,"%Y-%m-%d")
 
+assert start_date < end_date, "Start date is after end date!"
+
 epsg = args.epsg
 
 tiled_world = args.tiled_world
 
 # Check valid tile resolution
 tile_resolution = args.tile_resolution
-if  tile_resolution not in ["8km", "4km", "2km", "1km", "500m", "250m", "31.25m"]:
+if  tile_resolution not in ["16km", "8km", "4km", "2km", "1km", "500m", "250m", "31.25m"]:
 	print("Invalid tile_resolution.")
 	exit()
 

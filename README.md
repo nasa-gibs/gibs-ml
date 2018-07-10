@@ -9,7 +9,7 @@ Run ```conda install -c conda-forge gdal ``` to install the [GDAL translator lib
 # Download Data
 Run ```download_data.py``` to download a GIBS layer dataset. The script uses [```gdal_translate```](http://www.gdal.org/gdal_translate.html) to query the [GIBS API](https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+API+for+Developers#GIBSAPIforDevelopers-ServiceEndpointsandGetCapabilities).
 
-Images are saved in the ```data/``` directory by default. The folder structure will be ```data/{EPSG code}/{YYYY-MM-DD}/{Layer Name}.{Image Format}```. Image format (i.e. PNG, JPEG) is predefined by the ```layer_name```.
+Images are saved in the ```data/``` directory by default. The folder structure will be ```data/{EPSG code}/{YYYY-MM-DD}/{Layer Name}.{Image Format}```. Image format (i.e. PNG, JPEG) is predefined by the ```layer_name```. For our purposes, we work with satellite instruments that take a single image of the globe each day.
 
 ```
 arguments:
@@ -29,9 +29,9 @@ arguments:
   --output_dir          Name path of the output directory.  Default:  data
 ```
 
-Set ```--tile_resolution``` to decide the output resolution (img_resolution) of the image according to the table below. 
+Set ```--tile_resolution``` to set the tile_resolution with the corresponding output resolution (img_resolution) of the image according to the table below. 
 
-Set the ```--tiled_world``` flag to download the layer for each day as a collection of 512x512 tiles.
+Set the ```--tiled_world``` flag to download the layer for each day as a collection of 512x512 tiles (see tiled_resolution for number of tiles returned).
 
 | tile_resolution 	| tile_level 	|   img_resolution  	| tiled_resolution 	|
 |:---------------:	|:----------:	|:-----------------:	|:----------------:	|
@@ -49,24 +49,31 @@ Set the ```--tiled_world``` flag to download the layer for each day as a collect
 For example, ```download_data.py``` downloads the `VIIRS_SNPP_CorrectedReflectance_TrueColor` layer since the instrument began collecting data (i.e. '2015-11-24'). Each date will have a single image of the globe stitched together by GDAL. 
 
 # Split Data
-```split_data.py``` generates a text file with dates for the labels. You still have to hand label the anomalies though!
-
-# Data Preprocessing
-Run ```augment_data.py``` to augment the training dataset by rotations (90, 180, 270 degrees) and flips (horizontal and vertical).
+```split_data.py``` generates a text file ```{Layer Name}.txt``` with a labels (train, val, test) for each date. You still have to hand label the anomalies though!
 
 # Notebooks
+#### Unsupervised Approach 
+[```missing_data_detection.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/missing_data_detection.ipynb). Uses image processing techniques to automatically detect missing data holes in an image. 
 
-### Unsupervised Approach (```missing_data_detection.ipynb```)
+#### Handcrafted Featurizatization Approach
+Each image has computed a Histogram of Oriented Gradients (HOG) as well as a color histogram using the hue channel in HSV color space. Roughly speaking, HOG should capture the texture of the image while ignoring color information, and the color histogram represents the color of the input image while ignoring texture. The final feature vector for each image is formed by concatenating the HOG and color histogram feature vectors. See [```features.py```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/features.py) for implementation details.
 
-### Linear Classification (```linear_classifier.ipynb```)
+##### Linear Classification 
+[```linear_classifier.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/linear_classifier.ipynb). Linear classifer with both SVM (hinge) and softmax loss functions. The softmax classifier outputs probabilities. 
 
-### Neural Network (```neural_net.ipynb```)
+##### Neural Network 
+[```neural_net.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/neural_net.ipynb). A 2-Layer fully connected neural network that uses softmax to output probabilities.
 
-### Vanilla CNN (```cnn.ipynb```)
+### Deep End-to-End Approaches 
+##### Vanilla CNN 
+[```cnn.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn.ipynb). The image is passed through 3 layers of ```conv > bn > max_pool > relu```, followed by flattening the image and then applying 2 fully connected layers. Implemented using PyTorch framework.
 
-### DenseNet-121 CNN (```pretrained-cnn.ipynb```)
+##### Transfer Learning
+[```pretrained-cnn.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/pretrained-cnn.ipynb). 121-layer DenseNet pretrained on the Imagenet dataset. The last fully connected layer is retrained on the our dataset. It is important to note the difference between the distribution of the ImageNet dataset and our own dataset. Implemented using PyTorch framework.
 
 # Other
 ```gibs_layer.py``` contains several predefined GIBS layers as well as the XML formats for [TMS and Tiled WMS](http://www.gdal.org/frmt_wms.html) services to request layers from the GIBS API using a gdal driver.
+
+```augment_data.py``` augments the training dataset by rotations (90, 180, 270 degrees) and flips (horizontal and vertical).
 
 See examples using ```gdal_translate``` with TMS and Tiled WMS services [here](https://wiki.earthdata.nasa.gov/display/GIBS/Map+Library+Usage#expand-GDALBasics).

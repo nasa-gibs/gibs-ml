@@ -9,9 +9,7 @@ Run ```conda install -c conda-forge gdal ``` to install the [GDAL translator lib
 # Download Data
 Run ```download_data.py``` to download a GIBS layer dataset. The script uses [```gdal_translate```](http://www.gdal.org/gdal_translate.html) to query the [GIBS API](https://wiki.earthdata.nasa.gov/display/GIBS/GIBS+API+for+Developers#GIBSAPIforDevelopers-ServiceEndpointsandGetCapabilities).
 
-Set the ```--tiled_world``` flag to download the layer for each day as a collection of 512x512 tiles.
-
-Images are saved in the ```data/``` directory by default. 
+Images are saved in the ```data/``` directory by default. The folder structure will be ```data/{EPSG code}/{YYYY-MM-DD}/{Layer Name}.{Image Format}```. Image format (i.e. PNG, JPEG) is predefined by the ```layer_name```.
 
 ```
 arguments:
@@ -24,12 +22,16 @@ arguments:
   
   --tiled_world         Flag to download the entire world as a series of tiled images.
 
-  --tile_resolution     The zoom resolution of the tiles. Must more coarse than the native image resolution of the layer.  Default:  8km
+  --tile_resolution     The distance corresponding to a pixel in the image. Must more coarse than the native image resolution of the layer.  Default:  16km
   
-  --num_threads         Number of concurrent threads to launch to download images.  Default:  20
+  --num_threads         Number of concurrent threads to launch to download images.  Default:  10
 
   --output_dir          Name path of the output directory.  Default:  data
 ```
+
+Set ```--tile_resolution``` to decide the output resolution (img_resolution) of the image according to the table below. 
+
+Set the ```--tiled_world``` flag to download the layer for each day as a collection of 512x512 tiles.
 
 | tile_resolution 	| tile_level 	|   img_resolution  	| tiled_resolution 	|
 |:---------------:	|:----------:	|:-----------------:	|:----------------:	|
@@ -44,10 +46,7 @@ arguments:
 |      62.5m      	|     10     	|  (1048576,524288) 	|    (2048,1024)   	|
 |      31.25m     	|     11     	| (2097152,1048576) 	|    (4096,2048)   	|
 
-
 For example, ```download_data.py``` downloads the `VIIRS_SNPP_CorrectedReflectance_TrueColor` layer since the instrument began collecting data (i.e. '2015-11-24'). Each date will have a single image of the globe stitched together by GDAL. 
-
-The folder structure will be ```data/{EPSG code}/{YYYY-MM-DD}/{Layer Name}.{Image Format}```.
 
 # Split Data
 ```split_data.py``` generates a text file with dates for the labels. You still have to hand label the anomalies though!
@@ -55,7 +54,19 @@ The folder structure will be ```data/{EPSG code}/{YYYY-MM-DD}/{Layer Name}.{Imag
 # Data Preprocessing
 Run ```augment_data.py``` to augment the training dataset by rotations (90, 180, 270 degrees) and flips (horizontal and vertical).
 
+# Notebooks
+
+### Unsupervised Approach (```missing_data_detection.ipynb```)
+
+### Linear Classification (```linear_classifier.ipynb```)
+
+### Neural Network (```neural_net.ipynb```)
+
+### Vanilla CNN (```cnn.ipynb```)
+
+### DenseNet-121 CNN (```pretrained-cnn.ipynb```)
+
 # Other
-```gibs_layer.py``` has several predefined GIBS layers and the XML formats for [TMS and Tiled WMS](http://www.gdal.org/frmt_wms.html) services to request layers from the GIBS API using a gdal driver.
+```gibs_layer.py``` contains several predefined GIBS layers as well as the XML formats for [TMS and Tiled WMS](http://www.gdal.org/frmt_wms.html) services to request layers from the GIBS API using a gdal driver.
 
 See examples using ```gdal_translate``` with TMS and Tiled WMS services [here](https://wiki.earthdata.nasa.gov/display/GIBS/Map+Library+Usage#expand-GDALBasics).

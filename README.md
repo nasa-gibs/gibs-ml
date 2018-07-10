@@ -52,12 +52,12 @@ For example, ```download_data.py``` downloads the `VIIRS_SNPP_CorrectedReflectan
 ```split_data.py``` generates a text file ```{Layer Name}.txt``` with a labels (train, val, test) for each date. You still have to hand label the anomalies though!
 
 # Notebooks
-### Unsupervised Approach
+## Unsupervised Approach
 
 #### Missing Data Detection. [```missing_data_detection.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/missing_data_detection.ipynb). 
 Uses image processing techniques to automatically detect missing data holes in an image. 
 
-### Handcrafted Featurizatization Approach
+## Handcrafted Featurizatization Approach
 Each image has computed a Histogram of Oriented Gradients (HOG) as well as a color histogram using the hue channel in HSV color space. Roughly speaking, HOG should capture the texture of the image while ignoring color information, and the color histogram represents the color of the input image while ignoring texture. The final feature vector for each image is formed by concatenating the HOG and color histogram feature vectors. See [```features.py```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/features.py) for implementation details.
 
 #### Linear Classification. [```linear_classifier.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/linear_classifier.ipynb). 
@@ -66,7 +66,7 @@ Linear classifer with both SVM (hinge) and softmax loss functions. The softmax c
 #### Neural Network. [```neural_net.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/neural_net.ipynb). 
 A 2-Layer fully connected neural network that uses softmax to output probabilities.
 
-### Deep End-to-End Approaches 
+## Deep End-to-End Approaches 
 
 #### Vanilla CNN. [```cnn.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn.ipynb). 
 The image is passed through 3 layers of ```conv > bn > max_pool > relu```, followed by flattening the image and then applying 2 fully connected layers. Implemented using PyTorch framework.

@@ -11,7 +11,6 @@ class Net(nn.Module):
     This is the standard way to define your own network in PyTorch. You typically choose the components
     (e.g. LSTMs, linear layers etc.) of your network in the __init__ function. You then apply these layers
     on the input step-by-step in the forward function. You can use torch.nn.functional to apply functions
-
     such as F.relu, F.sigmoid, F.softmax, F.max_pool2d. Be careful to ensure your dimensions are correct after each
     step. You are encouraged to have a look at the network in pytorch/nlp/model/net.py to get a better sense of how
     you can go about defining your own network.
@@ -96,38 +95,3 @@ def loss_fn(outputs, labels):
           demonstrates how you can easily define a custom loss function.
     """
     return F.nll_loss(outputs, labels)
-
-
-# def compute_loss_with_BCE(outputs, labels):
-#     """
-#     Uses weighted BCE to calculate loss
-
-#     Args:
-#         outputs: (Variable)  batch_size dimension x 2 - output of the model
-#         labels: (Variable) dimension batch_size, where each element is a value in [0, 1]
-
-#     """
-#     labels = labels.view(-1)
-#     labels = labels.float()
-#     print(labels.shape)
-#     print(outputs.shape)
-#     print(labels.type())
-
-#     # Generate the the proportion of labels
-#     ones = torch.sum(labels)
-#     total = labels.nelement()
-
-#     # Weight by the inverse proportions of each label
-#     # weights = torch.FloatTensor(labels.size()).type_as(outputs.data)
-#     print(outputs)
-#     weights = torch.FloatTensor([total - ones, ones])
-#     # weights = weights.view(weights.size(0), 1).expand(weights.size(0), 2)
-#     print(weights.shape)
-#     print(weights)
-
-#     outputs = outputs[:,0]
-#     print(outputs.shape)
-#     criterion = torch.nn.BCELoss(weight=weights)
-
-#     loss = criterion(outputs, labels)
-#     return loss

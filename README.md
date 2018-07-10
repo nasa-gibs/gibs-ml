@@ -1,7 +1,7 @@
 # gibs_ml
 Machine learning for anomaly detection in Global Imagery Browse Services ([GIBS](https://earthdata.nasa.gov/about/science-system-description/eosdis-components/global-imagery-browse-services-gibs)) Earth satellite imagery.
 
-# Dependencies
+## Dependencies
 Run ```conda install -c conda-forge tqdm``` to install tqdm.
 
 Run ```conda install future``` to install future.
@@ -33,24 +33,22 @@ arguments:
   --output_dir          Name path of the output directory.  Default:  data
 ```
 
-Set ```--tile_resolution``` to set the tile_resolution with the corresponding output resolution (img_resolution) of the image according to the table below. 
+Set ```--tile_resolution``` to set the tile_resolution with the corresponding output resolutions (see pixel_resolution) according to the table below. If the ```--tiled_world``` flag is set this single image resolution is split up into a grid of tiled_resolution. This will download the layer for each day as a collection of num_tiles tiles. Each tile is a 512x512 image. 
 
-Set the ```--tiled_world``` flag to download the layer for each day as a collection of tiles (see tiled_resolution for number of tiles returned). Each tile is a 512x512 image. 
+| tile_resolution 	| tile_level 	|  pixel_resolution 	| tiled_resolution 	| num_tiles 	|
+|:---------------:	|:----------:	|:-----------------:	|:----------------:	|:---------:	|
+|       16km      	|      2     	|    (4096,2048)    	|       (8,4)      	|     32    	|
+|       8km       	|      3     	|    (8192,4096)    	|      (16,8)      	|    128    	|
+|       4km       	|      4     	|    (16384,8192)   	|      (32,16)     	|    512    	|
+|       2km       	|      5     	|   (32768,16384)   	|      (64,32)     	|    2048   	|
+|       1km       	|      6     	|   (65536,32768)   	|     (128,64)     	|    8192   	|
+|       500m      	|      7     	|   (131072,65536)  	|     (256,128)    	|   32768   	|
+|       250m      	|      8     	|  (262144,131072)  	|     (512,256)    	|   131072  	|
+|       125m      	|      9     	|  (524288,262144)  	|    (1024,512)    	|   524288  	|
+|      62.5m      	|     10     	|  (1048576,524288) 	|    (2048,1024)   	|  2097152  	|
+|      31.25m     	|     11     	| (2097152,1048576) 	|    (4096,2048)   	|  8388608  	|
 
-| tile_resolution 	| tile_level 	|   img_resolution  	| tiled_resolution 	|
-|:---------------:	|:----------:	|:-----------------:	|:----------------:	|
-|       16km      	|      2     	|    (4096,2048)    	|       (8,4)      	|
-|       8km       	|      3     	|    (8192,4096)    	|      (16,8)      	|
-|       4km       	|      4     	|    (16384,8192)   	|      (32,16)     	|
-|       2km       	|      5     	|   (32768,16384)   	|      (64,32)     	|
-|       1km       	|      6     	|   (65536,32768)   	|     (128,64)     	|
-|       500m      	|      7     	|   (131072,65536)  	|     (256,128)    	|
-|       250m      	|      8     	|  (262144,131072)  	|     (512,256)    	|
-|       125m      	|      9     	|  (524288,262144)  	|    (1024,512)    	|
-|      62.5m      	|     10     	|  (1048576,524288) 	|    (2048,1024)   	|
-|      31.25m     	|     11     	| (2097152,1048576) 	|    (4096,2048)   	|
-
-For example, by default, ```download_data.py``` downloads the `VIIRS_SNPP_CorrectedReflectance_TrueColor` layer since the instrument began collecting data (i.e. '2015-11-24') up to today. Each date will have a single image of the globe stitched together by GDAL of resolution 4096x2048 pixels. If the ```--tile_resolution``` flag were set we would retrieve 8 x 4 = 32 tiles for each date.
+For example, by default, ```download_data.py``` downloads the `VIIRS_SNPP_CorrectedReflectance_TrueColor` layer since the instrument began collecting data (i.e. '2015-11-24') up to today. Each date will have a single 4096x2048 image of the globe stitched together by GDAL. If the ```--tile_resolution``` flag were set for each date we would retrieve the 32 tiles in the (8,4) grid.
 
 ## Split Data
 ```split_data.py``` generates a text file ```{Layer Name}.txt``` with a split (i.e. train, val, test) for each date. You still have to hand label the anomalies though!
@@ -66,10 +64,10 @@ Uses image processing techniques to automatically detect missing data holes in a
 Each image has computed a Histogram of Oriented Gradients (HOG) as well as a color histogram using the hue channel in HSV color space. Roughly speaking, HOG should capture the texture of the image while ignoring color information, and the color histogram represents the color of the input image while ignoring texture. The final feature vector for each image is formed by concatenating the HOG and color histogram feature vectors. See [```features.py```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/features.py) for implementation details.
 
 #### Linear Classification. [```linear_classifier.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/linear_classifier.ipynb). 
-Linear classifer with both SVM (hinge) and softmax loss functions. The softmax classifier outputs probabilities. 
+Linear classifer with both SVM (hinge) and Softmax loss functions. The Softmax classifier outputs probabilities. Note that the probabilities computed by the Softmax classifier are better thought of as confidences where, similar to the SVM, the ordering of the scores is interpretable, but the absolute numbers (or their differences) technically are not.
 
 #### Neural Network. [```neural_net.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/neural_net.ipynb). 
-A 2-Layer fully connected neural network that uses softmax to output probabilities.
+A 2-Layer fully connected neural network that uses a Softmax classifer to output probabilities.
 
 ## End-to-End Approaches 
 
@@ -80,6 +78,7 @@ Our simple CNN architecture is 3 layers of ```conv > bn > max_pool > relu```, fo
 121-layer DenseNet pretrained on the Imagenet dataset. The last fully connected layer is retrained on our dataset. It is important to note the difference between the distribution of the ImageNet dataset and our own dataset. Implemented using PyTorch framework.
 
 # Other
+
 ```gibs_layer.py``` contains a GIBS layer class with several predefined GIBS layers as well as the XML formats for [TMS and Tiled WMS](http://www.gdal.org/frmt_wms.html) services to request layers from the GIBS API using a gdal driver.
 
 ```augment_data.py``` augments the training dataset by rotations (90, 180, 270 degrees) and flips (horizontal and vertical).

@@ -15,7 +15,7 @@ class SatelliteDataset(Dataset):
     """
     A standard PyTorch definition of Dataset which defines the functions __len__ and __getitem__.
     """    
-    def __init__(self, data_dir, layer_name, label_split_file, split, transform, img_binarize):
+    def __init__(self, data_dir, layer_name, label_split_file, split, transform):
         """
         Store the filenames of the jpgs to use. Specifies transforms to apply on images.
 
@@ -67,7 +67,6 @@ class SatelliteDataset(Dataset):
 
         self.filenames, self.labels = load_layer_split()
         self.transform = transform
-        self.img_binarize = img_binarize
 
     def __len__(self):
         # return size of dataset
@@ -85,19 +84,11 @@ class SatelliteDataset(Dataset):
             label: (int) corresponding label of image
         """
         image = Image.open(self.filenames[idx])  # PIL image
-        
-        if self.img_binarize:
-            # Grayscale and black and white the image!
-            image = np.asarray(image)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            _, image = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY)            
-            image = Image.fromarray(image)
-
         image = self.transform(image)
         return image, self.labels[idx]
 
 
-def fetch_dataloader(split, transformer, data_dir, layer_name, label_split_file, params, img_binarize):
+def fetch_dataloader(split, transformer, data_dir, layer_name, label_split_file, params):
     """
     Fetches the DataLoader object for each type in types from data_dir.
 
@@ -120,8 +111,8 @@ def fetch_dataloader(split, transformer, data_dir, layer_name, label_split_file,
         # weights = 1 / torch.Tensor(class_sample_count)
         # sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, num_samples)
         # Must set 'shuffle' to False
-        dataloader = DataLoader(SatelliteDataset(data_dir, layer_name, label_split_file, split, transformer, img_binarize), batch_size=params.batch_size, sampler=None, shuffle=True, num_workers=params.num_workers, pin_memory=params.cuda)
+        dataloader = DataLoader(SatelliteDataset(data_dir, layer_name, label_split_file, split, transformer), batch_size=params.batch_size, sampler=None, shuffle=True, num_workers=params.num_workers, pin_memory=params.cuda)
     elif split == 'val' or split == 'test':
-        dataloader = DataLoader(SatelliteDataset(data_dir, layer_name, label_split_file, split, transformer, img_binarize), batch_size=params.batch_size, shuffle=False, num_workers=params.num_workers, pin_memory=params.cuda)
+        dataloader = DataLoader(SatelliteDataset(data_dir, layer_name, label_split_file, split, transformer), batch_size=params.batch_size, shuffle=False, num_workers=params.num_workers, pin_memory=params.cuda)
 
     return dataloader

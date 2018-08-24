@@ -7,6 +7,8 @@ from shutil import copyfile
 from PIL import Image
 from tqdm import tqdm
 
+from gibs_layer import GIBSLayer
+
 from datetime import datetime, time, timedelta, date
 from dateutil.relativedelta import relativedelta
 from utils import daterange
@@ -14,11 +16,11 @@ from utils import daterange
 ###############################################################################
 # Constants
 ###############################################################################
-layer_name = 'VIIRS_SNPP_CorrectedReflectance_TrueColor'
+layer_name =  'VIIRS_SNPP_CorrectedReflectance_BandsM3_I3_M11' # 'MODIS_Terra_CorrectedReflectance_Bands367' # 'MODIS_Terra_CorrectedReflectance_TrueColor' # MODIS_Terra_CorrectedReflectance_Bands367, VIIRS_SNPP_CorrectedReflectance_TrueColor
 
 # Start and end dates for the labels
-start_date = date(2015, 11, 24)
-end_date = date(2018, 6, 27)
+start_date = None
+end_date = datetime(2018, 6, 27)
 
 # train-val-test split (60-20-20)
 TRAIN_CUTOFF = 0.60
@@ -30,13 +32,35 @@ labels_file = os.path.join(data_dir, layer_name + ".txt")
 split_labels_file = os.path.join(data_dir, "split_" + layer_name + ".txt")
 
 ###############################################################################
+# Argument checking
+###############################################################################
+
+# Check the layer name
+layer = GIBSLayer.get_gibs_layer(layer_name)
+if layer is None:
+    print("Invalid GIBS layer name")
+    exit()
+
+print("Downloading GIBS Layer: {}".format(layer.layer_name))
+
+# Parse the start date (inclusive) information
+if start_date is None:
+    start_date = datetime.strptime(layer.date_min,"%Y-%m-%d") 
+else:
+    if datetime.strptime(start_date,"%Y-%m-%d") < datetime.strptime(layer.date_min,"%Y-%m-%d"):
+        print("No layer data from {}. Will begin from {} instead".format(datetime.strptime(start_date,"%Y-%m-%d"),  datetime.strptime(layer.date_min,"%Y-%m-%d")))
+        start_date = datetime.strptime(layer.date_min,"%Y-%m-%d")
+
+print("From {} to {}".format(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
+
+###############################################################################
 # File checking
 ###############################################################################
 assert os.path.isdir(data_dir), "Couldn't find the dataset at {}".format(data_dir)
 
 # Generate labels file if non-existent
 if not os.path.exists(labels_file):
-    print("Making labels file {}".format(labels_file))
+    print("Making labels file: {}".format(labels_file))
     with open(labels_file, "w") as f:
         # Loop through dates
         for single_date in daterange(start_date, end_date):
@@ -64,7 +88,7 @@ for idx in range(N):
     else:
         split_names[idx] = "test"
 
-# # Make sure to always shuffle with a fixed seed so that the split is reproducible
+#Make sure to always shuffle with a fixed seed so that the split is reproducible
 random.seed(999)
 split_names.sort()
 random.shuffle(split_names)

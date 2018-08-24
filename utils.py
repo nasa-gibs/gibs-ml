@@ -2,9 +2,10 @@ import json
 import logging
 import os
 import shutil
-from datetime import timedelta
 
 import torch
+
+from datetime import timedelta
 
 def daterange(start_date, end_date):
     for n in range(int ((end_date - start_date).days)):
@@ -121,7 +122,7 @@ def save_checkpoint(state, is_best, checkpoint):
         shutil.copyfile(filepath, os.path.join(checkpoint, 'best.pth.tar'))
 
 
-def load_checkpoint(checkpoint, model, optimizer=None):
+def load_checkpoint(checkpoint, model, optimizer=None, map_location=None):
     """Loads model parameters (state_dict) from file_path. If optimizer is provided, loads state_dict of
     optimizer assuming it is present in checkpoint.
     Args:
@@ -131,7 +132,12 @@ def load_checkpoint(checkpoint, model, optimizer=None):
     """
     if not os.path.exists(checkpoint):
         raise("File doesn't exist {}".format(checkpoint))
-    checkpoint = torch.load(checkpoint)
+        
+    if map_location:
+        checkpoint = torch.load(checkpoint, map_location)
+    else:
+        checkpoint = torch.load(checkpoint)
+        
     model.load_state_dict(checkpoint['state_dict'])
 
     if optimizer:

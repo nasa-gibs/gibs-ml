@@ -50,28 +50,39 @@ Set ```--tile_resolution``` to set the tile_resolution with the corresponding ou
 
 For example, by default, ```download_data.py``` downloads the `VIIRS_SNPP_CorrectedReflectance_TrueColor` layer since the instrument began collecting data (i.e. '2015-11-24') up to today. Each date will have a single 4096x2048 image of the globe stitched together by GDAL. If the ```--tile_resolution``` flag were set for each date we would retrieve the 32 tiles in the (8,4) grid.
 
+*NOTE: ```download_tiled_data.py``` was added to rapidly download tiled images for layers whose tiles were only accessible via URL.*  
+
 ## Split Data
 ```split_data.py``` generates a text file ```{Layer Name}.txt``` with a split (i.e. train, val, test) for each date. You still have to hand label the anomalies though!
 
 # Experiments
 
-## Unsupervised Approach
+## Unsupervised Labeling
+We explore (automated) unsupervised techniques to label the images and the pixels. Currently we analyze MODIS and VIIRS layers, but this analysis can be extended to other datasets.
 
-#### Missing Data Detection. [```missing_data_detection.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/missing_data_detection.ipynb). 
-Uses image processing techniques to automatically detect missing data holes in an image. 
+#### Image-Level Missing Data Detection. [```image_labeling_missing_data_viirs.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/image_labeling_missing_data_viirs.ipynb), [```image_labeling_missing_data_modis_terra.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/image_labeling_missing_data_modis_terra.ipynb), [```image_labeling_missing_data_modis_aqua.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/image_labeling_missing_data_modis_aqua.ipynb). 
+Uses image processing techniques and morphological operations to automatically detect missing data holes in an image. 
+
+#### Pixel-Level Anomaly Detection. [```pixel_labeling_miscoloration_viirs.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/pixel_labeling_miscoloration_viirs.ipynb), [```pixel_labeling_missing_data_viirs.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/pixel_labeling_missing_data_viirs.ipynb). 
+Uses image processing techniques, basic statistical analysis, and density-based clustering methods to automatically detect anomalous pixel values in an image. 
 
 ## Handcrafted Featurizatization Approach
-Each image has computed a Histogram of Oriented Gradients (HOG) as well as a color histogram using the hue channel in HSV color space. Roughly speaking, HOG should capture the texture of the image while ignoring color information, and the color histogram represents the color of the input image while ignoring texture. The final feature vector for each image is formed by concatenating the HOG and color histogram feature vectors. See [```features.py```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/features.py) for implementation details.
+Each image has computed a Histogram of Oriented Gradients (HOG) as well as a color histogram using the hue channel in HSV color space. Roughly speaking, HOG should capture the texture of the image while ignoring color information, and the color histogram represents the color of the input image while ignoring texture. 
+
+The final feature vector for each image is formed by concatenating the HOG and color histogram feature vectors. See [```features.py```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/features.py) for implementation details.
 
 #### Linear Classification. [```linear_classifier.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/linear_classifier.ipynb). 
 Linear classifer with both SVM (hinge) and Softmax loss functions. The Softmax classifier outputs probabilities. Note that the probabilities computed by the Softmax classifier are better thought of as confidences where, similar to the SVM, the ordering of the scores is interpretable, but the absolute numbers (or their differences) technically are not.
+
+#### Random Forest Classifier. [```random_forest.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/random_forest.ipynb), [```random_forest_pixels.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/random_forest_pixels.ipynb). 
+A Random Forest classifier with tree depth of 5. Notebooks for image-level detection and pixel-level detection. 
 
 #### Neural Network. [```neural_net.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/neural_net.ipynb). 
 A 2-Layer fully connected neural network that uses a Softmax classifer to output probabilities.
 
 ## End-to-End Approaches 
 
-#### Vanilla CNN. [```cnn.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn.ipynb). 
+#### Vanilla CNN. [```cnn.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn.ipynb), [```cnn_pixels.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn_pixels.ipynb). 
 Our simple CNN architecture is 3 layers of ```conv > bn > max_pool > relu```, followed by flattening the image and then applying 2 fully connected layers. Implemented using PyTorch framework.
 
 #### Transfer Learning. [```pretrained-cnn.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/pretrained-cnn.ipynb). 
@@ -81,6 +92,6 @@ Our simple CNN architecture is 3 layers of ```conv > bn > max_pool > relu```, fo
 
 ```gibs_layer.py``` contains a GIBS layer class with several predefined GIBS layers as well as the XML formats for [TMS and Tiled WMS](http://www.gdal.org/frmt_wms.html) services to request layers from the GIBS API using a gdal driver.
 
-```augment_data.py``` augments the training dataset by rotations (90, 180, 270 degrees) and flips (horizontal and vertical).
+```utils.py``` contains various helper functions for PyTorch and date manipulation.
 
 See examples using ```gdal_translate``` with TMS and Tiled WMS services [here](https://wiki.earthdata.nasa.gov/display/GIBS/Map+Library+Usage#expand-GDALBasics).

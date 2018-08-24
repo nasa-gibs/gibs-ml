@@ -85,7 +85,7 @@ A 2-Layer fully connected neural network that uses a Softmax classifer to output
 #### Vanilla CNN. [```cnn.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn.ipynb), [```cnn_pixels.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn_pixels.ipynb). 
 Our simple CNN architecture is 3 layers of ```conv > bn > max_pool > relu```, followed by flattening the image and then applying 2 fully connected layers. Implemented using PyTorch framework.
 
-#### Transfer Learning. [```pretrained_cnn.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/pretrained_cnn.ipynb). 
+#### Transfer Learning. [```cnn_pretrained.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn_pretrained.ipynb). 
 121-layer DenseNet pretrained on the Imagenet dataset. The last fully connected layer is retrained on our dataset. It is important to note the difference between the distribution of the ImageNet dataset and our own dataset. Implemented using PyTorch framework.
 
 # Other

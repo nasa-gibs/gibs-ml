@@ -60,32 +60,32 @@ For example, by default, ```download_data.py``` downloads the `VIIRS_SNPP_Correc
 ## Unsupervised Labeling
 We explore (automated) unsupervised techniques to label the images and the pixels. Currently we analyze MODIS and VIIRS layers, but this analysis can be extended to other datasets.
 
-#### Image-Level Missing Data Detection. [```image_labeling_missing_data_viirs.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/image_labeling_missing_data_viirs.ipynb), [```image_labeling_missing_data_modis_terra.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/image_labeling_missing_data_modis_terra.ipynb), [```image_labeling_missing_data_modis_aqua.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/image_labeling_missing_data_modis_aqua.ipynb). 
+#### Image-Level Missing Data Detection. [```image_labeling_missing_data_viirs.ipynb```](image_labeling_missing_data_viirs.ipynb), [```image_labeling_missing_data_modis_terra.ipynb```](image_labeling_missing_data_modis_terra.ipynb), [```image_labeling_missing_data_modis_aqua.ipynb```](image_labeling_missing_data_modis_aqua.ipynb). 
 Uses image processing techniques and morphological operations to automatically detect missing data holes in an image. 
 
-#### Pixel-Level Anomaly Detection. [```pixel_labeling_miscoloration_viirs.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/pixel_labeling_miscoloration_viirs.ipynb), [```pixel_labeling_missing_data_viirs.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/pixel_labeling_missing_data_viirs.ipynb). 
+#### Pixel-Level Anomaly Detection. [```pixel_labeling_miscoloration_viirs.ipynb```](pixel_labeling_miscoloration_viirs.ipynb), [```pixel_labeling_missing_data_viirs.ipynb```](pixel_labeling_missing_data_viirs.ipynb). 
 Uses image processing techniques, basic statistical analysis, and density-based clustering methods to automatically detect anomalous pixel values in an image. 
 
 ## Handcrafted Featurizatization Approach
 Each image has computed a Histogram of Oriented Gradients (HOG) as well as a color histogram using the hue channel in HSV color space. Roughly speaking, HOG should capture the texture of the image while ignoring color information, and the color histogram represents the color of the input image while ignoring texture. 
 
-The final feature vector for each image is formed by concatenating the HOG and color histogram feature vectors. See [```features.py```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/features.py) for implementation details.
+The final feature vector for each image is formed by concatenating the HOG and color histogram feature vectors. See [```features.py```](features.py) for implementation details.
 
-#### Linear Classification. [```linear_classifier.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/linear_classifier.ipynb). 
+#### Linear Classification. [```linear_classifier.ipynb```](linear_classifier.ipynb). 
 Linear classifer with both SVM (hinge) and Softmax loss functions. The Softmax classifier outputs probabilities. Note that the probabilities computed by the Softmax classifier are better thought of as confidences where, similar to the SVM, the ordering of the scores is interpretable, but the absolute numbers (or their differences) technically are not.
 
-#### Random Forest Classifier. [```random_forest.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/random_forest.ipynb), [```random_forest_pixels.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/random_forest_pixels.ipynb). 
+#### Random Forest Classifier. [```random_forest.ipynb```](random_forest.ipynb), [```random_forest_pixels.ipynb```](random_forest_pixels.ipynb). 
 A Random Forest classifier with tree depth of 5. Notebooks for image-level detection and pixel-level detection. 
 
-#### Neural Network. [```neural_net.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/neural_net.ipynb). 
+#### Neural Network. [```neural_net.ipynb```](neural_net.ipynb). 
 A 2-Layer fully connected neural network that uses a Softmax classifer to output probabilities.
 
 ## End-to-End Approaches 
 
-#### Vanilla CNN. [```cnn.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn.ipynb), [```cnn_pixels.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn_pixels.ipynb). 
+#### Vanilla CNN. [```cnn.ipynb```](cnn.ipynb), [```cnn_pixels.ipynb```](cnn_pixels.ipynb). 
 Our simple CNN architecture is 3 layers of ```conv > bn > max_pool > relu```, followed by flattening the image and then applying 2 fully connected layers. Implemented using PyTorch framework.
 
-#### Transfer Learning. [```cnn_pretrained.ipynb```](https://github.jpl.nasa.gov/xue/gibs_ml/blob/master/cnn_pretrained.ipynb). 
+#### Transfer Learning. [```cnn_pretrained.ipynb```](cnn_pretrained.ipynb). 
 121-layer DenseNet pretrained on the Imagenet dataset. The last fully connected layer is retrained on our dataset. It is important to note the difference between the distribution of the ImageNet dataset and our own dataset. Implemented using PyTorch framework.
 
 # Other

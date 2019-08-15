@@ -1,4 +1,4 @@
-# gibs_ml
+# GIBS Machine Learning
 Machine learning for anomaly detection in Global Imagery Browse Services ([GIBS](https://earthdata.nasa.gov/about/science-system-description/eosdis-components/global-imagery-browse-services-gibs)) Earth satellite imagery.
 
 ## Dependencies
